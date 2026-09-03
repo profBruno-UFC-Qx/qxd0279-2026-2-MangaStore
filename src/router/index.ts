@@ -5,10 +5,12 @@ import MangaDetail from '@/pages/MangaDetail.vue'
 const routes = [
   {
     path: '/',
+    name: 'home',
     component: Home,
   },
   {
-    path: '/detail',
+    path: '/manga/:id',
+    name: 'manga-detail',
     component: MangaDetail,
   },
 ]

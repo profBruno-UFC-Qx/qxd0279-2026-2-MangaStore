@@ -1,26 +1,12 @@
 <script setup lang="ts">
 import { ref, onBeforeMount } from 'vue'
-import { type Manga } from '../types'
-import MangaCard from '../components/MangaCard.vue'
+import { MangaService } from '@/api/MangaService'
+import { type Manga } from '@/types'
+import MangaCard from '@/components/MangaCard.vue'
 
 const mangas = ref<Manga[]>([])
 
-onBeforeMount(async () => loadMangas())
-
-async function loadMangas() {
-  try {
-    const response = await fetch('http://localhost:1337/api/mangas?populate=cover')
-    if (!response.ok) {
-      throw new Error(`Response status: ${response.status}`)
-    }
-
-    const result = await response.json()
-    mangas.value = result.data
-    console.log(result)
-  } catch (error) {
-    console.error(error.message)
-  }
-}
+onBeforeMount(async () => (mangas.value = await MangaService.findAll()))
 </script>
 
 <template>

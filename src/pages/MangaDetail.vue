@@ -1,24 +1,31 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onBeforeMount } from 'vue'
+import { useRoute } from 'vue-router'
+import { MangaService } from '@/api/MangaService'
+import { useUpload } from '@/api'
 import type { Manga } from '@/types'
-const props = defineProps<Manga>()
 
-const coverUrl = computed(() => `http://localhost:1337${props.cover.url}`)
+const route = useRoute()
+const manga = ref<Manga | null>(null)
+
+onBeforeMount(async () => (manga.value = await MangaService.findById(route.params.id as string)))
+
+const coverUrl = computed(() => (manga.value ? useUpload(manga.value.cover.url) : ''))
 </script>
 
 <template>
-  <div class="row">
+  <div v-if="manga" class="row">
     <div class="card shadow-sm col-md-4">
-      <img :src="coverUrl" :alt="'Capa do manga' + props.title" :title="props.title" />
+      <img :src="coverUrl" :alt="'Capa do manga' + manga.title" :title="manga.title" />
     </div>
     <div class="col-md-8">
-      <div class="card-header">{{ props.title }}</div>
+      <div class="card-header">{{ manga.title }}</div>
       <div class="card-body"></div>
       <p class="card-title">
-        {{ props.summary }}
+        {{ manga.summary }}
       </p>
       <p class="card-text fw-bold">
-        Preço: <span class="text-danger">{{ props.price }}</span>
+        Preço: <span class="text-danger">{{ manga.price }}</span>
       </p>
     </div>
   </div>
