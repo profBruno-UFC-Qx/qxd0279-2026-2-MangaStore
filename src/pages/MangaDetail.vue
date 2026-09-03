@@ -14,19 +14,26 @@ const coverUrl = computed(() => (manga.value ? useUpload(manga.value.cover.url) 
 </script>
 
 <template>
-  <div v-if="manga" class="row">
-    <div class="card shadow-sm col-md-4">
-      <img :src="coverUrl" :alt="'Capa do manga' + manga.title" :title="manga.title" />
-    </div>
-    <div class="col-md-8">
-      <div class="card-header">{{ manga.title }}</div>
-      <div class="card-body"></div>
-      <p class="card-title">
-        {{ manga.summary }}
-      </p>
-      <p class="card-text fw-bold">
-        Preço: <span class="text-danger">{{ manga.price }}</span>
-      </p>
+  <div v-if="manga" class="card shadow-sm mb-3">
+    <div class="row g-0">
+      <div class="col-md-4">
+        <img
+          :src="coverUrl"
+          :alt="'Capa do manga ' + manga.title"
+          :title="manga.title"
+          class="rounded-start w-100 h-100 object-fit-cover"
+        />
+      </div>
+      <div class="col-md-8">
+        <div class="card-body">
+          <h5 class="card-title">{{ manga.title }}</h5>
+          <h6 class="card-subtitle mb-2 text-body-secondary">Volume {{ manga.number }}</h6>
+          <p class="card-text">{{ manga.summary }}</p>
+          <p class="card-text fw-bold">
+            Preço: <span class="text-danger">{{ manga.price }}</span>
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
