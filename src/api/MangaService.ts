@@ -1,5 +1,6 @@
 import { useFetch } from '.'
 import type { Manga } from '@/types'
+import { router } from '@/router'
 
 // A API (Strapi) devolve os recursos dentro de um envelope { data, meta }.
 type StrapiResponse<T> = { data: T }
@@ -8,6 +9,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await useFetch(path, init)
 
   if (!response.ok) {
+    if (response.status === 404) {
+      await router.replace('/notFound')
+    }
     throw new Error(`Response status: ${response.status}`)
   }
 
