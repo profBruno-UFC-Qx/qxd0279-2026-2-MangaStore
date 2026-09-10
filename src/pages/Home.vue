@@ -1,37 +1,62 @@
 <script setup lang="ts">
 import { ref, onBeforeMount } from 'vue'
-import { type Manga } from '../types'
-import MangaCard from '../components/MangaCard.vue'
+import { onBeforeRouteUpdate, useRoute } from 'vue-router'
+import { type Manga } from '@/types'
+import { MangaService, type MetaInformation } from '@/api/MangaService'
+import MangaCard from '@/components/MangaCard.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import Alert from '@/components/Alert.vue'
+import PaginationContainer from '@/components/PaginationContainer.vue'
 
+const route = useRoute()
 const mangas = ref<Manga[]>([])
+const loading = ref(true)
+const error = ref<string | null>(null)
+const meta = ref<MetaInformation>({} as MetaInformation)
 
-onBeforeMount(async () => loadMangas())
-
-async function loadMangas() {
+async function loadMangas(page: number) {
   try {
-    const response = await fetch('http://localhost:1337/api/mangas?populate=cover')
-    if (!response.ok) {
-      throw new Error(`Response status: ${response.status}`)
-    }
-
-    const result = await response.json()
+    const result = await MangaService.findAll(page || 1)
     mangas.value = result.data
-    console.log(result)
-  } catch (error) {
-    console.error(error.message)
+    meta.value = result.meta
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    loading.value = false
   }
 }
+
+onBeforeMount(async () => await loadMangas(Number(route.query.page)))
+onBeforeRouteUpdate(async (to, from) => {
+  if (to.query.page != from.query.page) {
+    await loadMangas(Number(to.query.page))
+  }
+})
 </script>
 
 <template>
-  <MangaCard
-    v-for="manga of mangas"
-    :key="manga.id"
-    :id="manga.id"
-    :cover="manga.cover"
-    :title="manga.title"
-    :summary="manga.summary"
-    :price="manga.price"
-    :number="manga.number"
-  />
+  <LoadingSpinner v-if="loading" label="Carregando mangás…" />
+  <Alert v-else-if="error" :message="error"></Alert>
+  <template v-else>
+    <PaginationContainer
+      class="mb-3 d-flex justify-content-center"
+      v-bind="meta"
+    ></PaginationContainer>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+      <MangaCard
+        v-for="manga of mangas"
+        :key="manga.id"
+        :id="manga.id"
+        :cover="manga.cover"
+        :title="manga.title"
+        :summary="manga.summary"
+        :price="manga.price"
+        :number="manga.number"
+      />
+    </div>
+    <PaginationContainer
+      class="mt-3 d-flex justify-content-center"
+      v-bind="meta"
+    ></PaginationContainer>
+  </template>
 </template>

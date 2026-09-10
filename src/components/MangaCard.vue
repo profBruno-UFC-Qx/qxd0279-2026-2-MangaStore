@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
+import { useUpload } from '@/api'
 import type { Manga } from '@/types'
 const props = defineProps<Manga>()
 
-const coverUrl = computed(() => `http://localhost:1337${props.cover.url}`)
+const coverUrl = computed(() => useUpload(props.cover.url))
 </script>
 
 <template>
   <div class="col">
-    <div class="card shadow-sm">
+    <RouterLink
+      :to="{ name: 'manga-detail', params: { id: props.id } }"
+      class="card shadow-sm text-decoration-none"
+    >
       <img :src="coverUrl" :alt="'Capa do manga' + props.title" :title="props.title" />
       <div class="card-body">
         <p class="card-title">
@@ -18,6 +23,6 @@ const coverUrl = computed(() => `http://localhost:1337${props.cover.url}`)
           Preço: <span class="text-danger">{{ props.price }}</span>
         </p>
       </div>
-    </div>
+    </RouterLink>
   </div>
 </template>
