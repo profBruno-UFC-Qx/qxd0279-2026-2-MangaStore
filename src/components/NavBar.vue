@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import { useAuthStore } from '@/stores/authStore'
 import { RouterLink } from 'vue-router'
+
+const authStore = useAuthStore()
 </script>
 
 <template>
@@ -16,11 +20,12 @@ import { RouterLink } from 'vue-router'
             </p>
           </div>
           <div class="col-sm-4 offset-md-1 py-4">
-            <h4>Contact</h4>
+            <h4 v-if="authStore.username">{{ authStore.username }}</h4>
             <ul class="list-unstyled">
-              <li><a href="#" class="text-white">Follow on X</a></li>
-              <li><a href="#" class="text-white">Like on Facebook</a></li>
-              <li><a href="#" class="text-white">Email me</a></li>
+              <li v-if="!authStore.username">
+                <router-link to="/login" class="text-white">Login</router-link>
+              </li>
+              <li v-else><a href="#" @click="authStore.logout" class="text-white">Logout</a></li>
             </ul>
           </div>
         </div>
