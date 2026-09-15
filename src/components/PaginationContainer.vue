@@ -26,7 +26,7 @@ const props = defineProps<MetaInformation>()
         Anterior
       </button>
       <button
-        v-for="i in props.pagination?.pageCount"
+        v-for="i in props.pagination.pageCount"
         :key="i"
         type="button"
         class="btn"

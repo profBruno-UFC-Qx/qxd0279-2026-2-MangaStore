@@ -3,7 +3,7 @@ import { ref, computed, onBeforeMount } from 'vue'
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { useUpload } from '@/api'
 import type { Manga } from '@/types'
-import { MangaService, type MetaInformation } from '@/api/MangaService'
+import { MangaService } from '@/api/MangaService'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Alert from '@/components/Alert.vue'
 
@@ -12,7 +12,6 @@ const router = useRouter()
 const loading = ref(true)
 const error = ref<string | null>(null)
 const manga = ref<Manga | null>(null)
-const meta = ref<MetaInformation>({} as MetaInformation)
 
 onBeforeMount(async () => loadManga(route.params.id as string))
 
@@ -26,7 +25,6 @@ async function loadManga(id: string) {
   try {
     const result = await MangaService.findById(id)
     manga.value = result.data
-    meta.value = meta.value
   } catch (e) {
     error.value = (e as Error).message
   } finally {
