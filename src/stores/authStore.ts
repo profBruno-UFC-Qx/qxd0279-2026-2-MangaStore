@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { AuthenticationService } from '@/api/AuthenticationService'
+import { ApiError } from '@/api/ApiError'
 
 export const useAuthStore = defineStore('authStore', () => {
   const username = ref<string | null>(localStorage.getItem('username'))
@@ -19,6 +20,21 @@ export const useAuthStore = defineStore('authStore', () => {
     persistState()
   }
 
+  async function fetchMe() {
+    if (!jwt.value) return
+
+    try {
+      const user = await AuthenticationService.me(jwt.value)
+      username.value = user.username
+      role.value = user.role?.type || null
+      persistState()
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
+        logout()
+      }
+    }
+  }
+
   function persistState() {
     localStorage.setItem('username', username.value!!)
     localStorage.setItem('token', jwt.value!!)
@@ -35,5 +51,5 @@ export const useAuthStore = defineStore('authStore', () => {
     localStorage.removeItem('role')
   }
 
-  return { username, isAdmin, authenticate, logout }
+  return { username, isAdmin, authenticate, fetchMe, logout }
 })

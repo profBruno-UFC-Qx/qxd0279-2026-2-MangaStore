@@ -45,9 +45,13 @@ export const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, from) => {
-  const authStore = useAuthStore()
-  if (to.meta.requiresAuth && !authStore.isAdmin) {
-    return '/login'
+router.beforeEach(async (to) => {
+  if (to.meta.requiresAuth) {
+    const authStore = useAuthStore()
+    await authStore.fetchMe()
+
+    if (!authStore.isAdmin) {
+      return '/login'
+    }
   }
 })

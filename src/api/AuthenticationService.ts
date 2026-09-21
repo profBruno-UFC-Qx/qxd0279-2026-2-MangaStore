@@ -1,4 +1,5 @@
 import { useFetch } from '.'
+import { ApiError } from './ApiError'
 
 type User = {
   username: string
@@ -26,13 +27,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     if (response.status == 400) {
-      throw new Error(`${result.error?.message}`)
+      throw new ApiError(response.status, `${result.error?.message}`)
     }
-    throw new Error(`Response status: ${response.status}`)
+    throw new ApiError(response.status, `Response status: ${response.status}`)
   }
 
   return result
 }
+
+const me = (jwt: string) =>
+  request<User>('/users/me?populate=role', {
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+    },
+  })
 
 export const AuthenticationService = {
   login: async (identifier: string, password: string) => {
@@ -44,12 +52,8 @@ export const AuthenticationService = {
       body: JSON.stringify({ identifier, password }),
     })
 
-    const roleResult = await request<User>('/users/me?populate=role', {
-      headers: {
-        Authorization: `Bearer ${result.jwt}`,
-      },
-    })
-
-    return { ...result, user: { ...roleResult } }
+    return { ...result, user: await me(result.jwt) }
   },
+
+  me,
 }
