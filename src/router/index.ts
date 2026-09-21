@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/authStore'
 import Home from '@/pages/Home.vue'
 import MangaDetail from '@/pages/MangaDetail.vue'
 import Login from '@/pages/Login.vue'
@@ -20,6 +21,7 @@ const routes = [
   {
     path: '/admin',
     component: HomeAdmin,
+    meta: { requiresAuth: true },
   },
   {
     path: '/login',
@@ -41,4 +43,11 @@ const routes = [
 export const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+router.beforeEach((to, from) => {
+  const authStore = useAuthStore()
+  if (to.meta.requiresAuth && !authStore.isAdmin) {
+    return '/login'
+  }
 })
