@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/authStore'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 
+const router = useRouter()
 const authStore = useAuthStore()
+function logout() {
+  authStore.logout()
+
+  router.push('/')
+}
 </script>
 
 <template>
@@ -24,7 +30,9 @@ const authStore = useAuthStore()
               <li v-if="!authStore.username">
                 <router-link to="/login" class="text-white">Login</router-link>
               </li>
-              <li @click="authStore.logout" v-else><a href="#" class="text-white">Logout</a></li>
+              <li v-else>
+                <button class="btn btn-link text-white" @click="logout">Logout</button>
+              </li>
             </ul>
           </div>
         </div>
