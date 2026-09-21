@@ -1,22 +1,21 @@
 <script setup lang="ts">
-import { ref, onBeforeMount } from 'vue'
-import { onBeforeRouteUpdate, useRoute } from 'vue-router'
+import { ref, onBeforeMount, computed } from 'vue'
 import { type Manga } from '@/types'
 import { MangaService, type MetaInformation } from '@/api/MangaService'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Alert from '@/components/Alert.vue'
 import { useUpload } from '@/api'
 
-const route = useRoute()
 const mangas = ref<Manga[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const meta = ref<MetaInformation>({} as MetaInformation)
+const page = ref<number>(1)
 
 async function loadMangas(page: number) {
   try {
     const result = await MangaService.findAll(page || 1)
-    mangas.value = result.data
+    mangas.value = mangas.value.concat(result.data)
     meta.value = result.meta
   } catch (e) {
     error.value = (e as Error).message
@@ -25,12 +24,16 @@ async function loadMangas(page: number) {
   }
 }
 
-onBeforeMount(async () => await loadMangas(Number(route.query.page)))
-onBeforeRouteUpdate(async (to, from) => {
-  if (to.query.page != from.query.page) {
-    await loadMangas(Number(to.query.page))
+onBeforeMount(async () => await loadMangas(page.value))
+
+const hasNextPage = computed(() => page.value < meta.value.pagination.pageCount)
+
+function goToNextPage() {
+  if (hasNextPage.value) {
+    page.value = page.value + 1
+    loadMangas(page.value)
   }
-})
+}
 </script>
 
 <template>
@@ -48,7 +51,10 @@ onBeforeRouteUpdate(async (to, from) => {
       <tfoot>
         <tr>
           <td colspan="3" class="text-center">
-            <button class="btn btn-secondary">Ver mais</button>
+            <button v-if="hasNextPage" class="btn btn-secondary" @click="goToNextPage">
+              Ver mais
+            </button>
+            <span v-else>Não há mais mangás</span>
           </td>
         </tr>
       </tfoot>
