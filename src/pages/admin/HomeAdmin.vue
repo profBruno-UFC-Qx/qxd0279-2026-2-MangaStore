@@ -8,6 +8,7 @@ import { useUpload } from '@/api'
 
 const mangas = ref<Manga[]>([])
 const loading = ref(true)
+const loadingMore = ref(false)
 const error = ref<string | null>(null)
 const meta = ref<MetaInformation>({} as MetaInformation)
 const page = ref<number>(1)
@@ -28,10 +29,12 @@ onBeforeMount(async () => await loadMangas(page.value))
 
 const hasNextPage = computed(() => page.value < meta.value.pagination.pageCount)
 
-function goToNextPage() {
+async function goToNextPage() {
   if (hasNextPage.value) {
     page.value = page.value + 1
-    loadMangas(page.value)
+    loadingMore.value = true
+    await loadMangas(page.value)
+    loadingMore.value = false
   }
 }
 </script>
@@ -51,7 +54,8 @@ function goToNextPage() {
       <tfoot>
         <tr>
           <td colspan="3" class="text-center">
-            <button v-if="hasNextPage" class="btn btn-secondary" @click="goToNextPage">
+            <LoadingSpinner v-if="loadingMore" label="Carregando mangás…" />
+            <button v-else-if="hasNextPage" class="btn btn-secondary" @click="goToNextPage">
               Ver mais
             </button>
             <span v-else>Não há mais mangás</span>
