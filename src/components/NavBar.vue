@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { RouterLink } from 'vue-router'
 
@@ -25,7 +24,7 @@ const authStore = useAuthStore()
               <li v-if="!authStore.username">
                 <router-link to="/login" class="text-white">Login</router-link>
               </li>
-              <li v-else><a href="#" @click="authStore.logout" class="text-white">Logout</a></li>
+              <li @click="authStore.logout" v-else><a href="#" class="text-white">Logout</a></li>
             </ul>
           </div>
         </div>

@@ -17,7 +17,12 @@ export const useAuthStore = defineStore('authStore', () => {
     role.value = result.user.role?.type
   }
 
-  function logout() {}
+  function logout() {
+    console.log('teste')
+    username.value = undefined
+    jwt.value = undefined
+    role.value = undefined
+  }
 
   return { username, isAdmin, authenticate, logout }
 })
