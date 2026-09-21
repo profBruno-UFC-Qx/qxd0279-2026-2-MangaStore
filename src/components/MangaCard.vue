@@ -26,3 +26,9 @@ const coverUrl = computed(() => useUpload(props.cover.url))
     </RouterLink>
   </div>
 </template>
+
+<style scoped>
+img:hover {
+  filter: grayscale(90%);
+}
+</style>

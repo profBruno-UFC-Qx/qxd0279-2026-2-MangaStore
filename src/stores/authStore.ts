@@ -3,9 +3,9 @@ import { defineStore } from 'pinia'
 import { AuthenticationService } from '@/api/AuthenticationService'
 
 export const useAuthStore = defineStore('authStore', () => {
-  const username = ref<string | undefined>()
-  const jwt = ref<string | undefined>()
-  const role = ref<string | undefined>()
+  const username = ref<string | null>(localStorage.getItem('username'))
+  const jwt = ref<string | null>(localStorage.getItem('token'))
+  const role = ref<string | null>(localStorage.getItem('role'))
 
   const isAdmin = computed(() => role.value == 'admin')
 
@@ -14,14 +14,23 @@ export const useAuthStore = defineStore('authStore', () => {
 
     username.value = result.user.username
     jwt.value = result.jwt
-    role.value = result.user.role?.type
+    role.value = result.user.role?.type || null
+
+    persistState()
+  }
+
+  function persistState() {
+    localStorage.setItem('username', username.value!!)
+    localStorage.setItem('token', jwt.value!!)
+    localStorage.setItem('role', role.value!!)
   }
 
   function logout() {
-    console.log('teste')
-    username.value = undefined
-    jwt.value = undefined
-    role.value = undefined
+    username.value = null
+    jwt.value = null
+    role.value = null
+
+    localStorage.clear()
   }
 
   return { username, isAdmin, authenticate, logout }
