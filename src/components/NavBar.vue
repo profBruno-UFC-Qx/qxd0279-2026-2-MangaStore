@@ -7,7 +7,7 @@ const authStore = useAuthStore()
 function logout() {
   authStore.logout()
 
-  router.push('/')
+  router.push({ name: 'home' })
 }
 </script>
 
@@ -27,8 +27,11 @@ function logout() {
           <div class="col-sm-4 offset-md-1 py-4">
             <h4 v-if="authStore.username">{{ authStore.username }}</h4>
             <ul class="list-unstyled">
+              <li v-if="authStore.isAdmin">
+                <router-link :to="{ name: 'admin' }" class="text-white">Administração</router-link>
+              </li>
               <li v-if="!authStore.isAuthenticated">
-                <router-link to="/login" class="text-white">Login</router-link>
+                <router-link :to="{ name: 'login' }" class="text-white">Login</router-link>
               </li>
               <li v-else>
                 <button class="btn btn-link text-white" @click="logout">Logout</button>
@@ -40,7 +43,7 @@ function logout() {
     </div>
     <div class="navbar navbar-dark bg-dark shadow-sm">
       <div class="container">
-        <RouterLink to="/" class="navbar-brand d-flex align-items-center">
+        <RouterLink :to="{ name: 'home' }" class="navbar-brand d-flex align-items-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="20"

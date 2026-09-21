@@ -70,7 +70,7 @@ function submit() {}
           {{ loading ? 'Criando conta…' : 'Criar conta' }}
         </button>
       </form>
-      <p class="mt-3 text-center">Já tem conta? <router-link to="/login">Entrar</router-link></p>
+      <p class="mt-3 text-center">Já tem conta? <router-link :to="{ name: 'login' }">Entrar</router-link></p>
     </div>
   </div>
 </template>

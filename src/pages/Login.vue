@@ -16,9 +16,9 @@ async function submit() {
   try {
     await authStore.authenticate(identifier.value, password.value)
     if (authStore.isAdmin) {
-      router.push('/admin')
+      router.push({ name: 'admin' })
     } else {
-      router.push('/')
+      router.push({ name: 'home' })
     }
   } catch (e) {
     error.value = (e as Error).message
@@ -61,7 +61,7 @@ async function submit() {
         </button>
       </form>
       <p class="mt-3 text-center">
-        Não tem conta? <router-link to="/register">Cadastre-se</router-link>
+        Não tem conta? <router-link :to="{ name: 'register' }">Cadastre-se</router-link>
       </p>
     </div>
   </div>

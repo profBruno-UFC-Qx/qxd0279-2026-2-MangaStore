@@ -28,7 +28,7 @@ async function loadManga(id: string) {
     manga.value = result.data
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) {
-      await router.replace('/notFound')
+      await router.replace({ name: 'not-found' })
     }
     error.value = (e as Error).message
   } finally {
@@ -66,11 +66,11 @@ const hasPrevious = computed(() => (manga.value ? manga.value.number <= 1 : fals
           <button
             class="btn btn-outline-secondary mx-1"
             :disabled="hasPrevious"
-            @click="router.push(`/manga/${manga.id - 1}`)"
+            @click="router.push({ name: 'manga-detail', params: { id: manga.id - 1 } })"
           >
             Anterior
           </button>
-          <button class="btn btn-outline-secondary" @click="router.push(`/manga/${manga.id + 1}`)">
+          <button class="btn btn-outline-secondary" @click="router.push({ name: 'manga-detail', params: { id: manga.id + 1 } })">
             Próximo
           </button>
         </nav>

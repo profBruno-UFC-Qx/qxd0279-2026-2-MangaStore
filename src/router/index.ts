@@ -20,6 +20,7 @@ const routes = [
   },
   {
     path: '/admin',
+    name: 'admin',
     component: HomeAdmin,
     meta: { requiresAuth: true },
   },
@@ -35,9 +36,10 @@ const routes = [
   },
   {
     path: '/notFound',
+    name: 'not-found',
     component: NotFound,
   },
-  { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
+  { path: '/:pathMatch(.*)*', name: 'catch-all', component: NotFound },
 ]
 
 export const router = createRouter({
@@ -51,7 +53,7 @@ router.beforeEach(async (to) => {
     await authStore.fetchMe()
 
     if (!authStore.isAdmin) {
-      return '/login'
+      return { name: 'login' }
     }
   }
 })

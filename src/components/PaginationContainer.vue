@@ -13,7 +13,7 @@ const props = defineProps<MetaInformation>()
         type="button"
         class="btn btn-outline-secondary"
         :disabled="props.pagination.page == 1"
-        @click="router.push('/?page=1')"
+        @click="router.push({ name: 'home', query: { page: 1 } })"
       >
         Primeira
       </button>
@@ -21,7 +21,7 @@ const props = defineProps<MetaInformation>()
         type="button"
         class="btn btn-outline-secondary"
         :disabled="props.pagination.page == 1"
-        @click="router.push(`/?page=${props.pagination.page - 1}`)"
+        @click="router.push({ name: 'home', query: { page: props.pagination.page - 1 } })"
       >
         Anterior
       </button>
@@ -31,7 +31,7 @@ const props = defineProps<MetaInformation>()
         type="button"
         class="btn"
         :class="[i == props.pagination.page ? 'btn-secondary' : 'btn-outline-secondary']"
-        @click="router.push(`/?page=${i}`)"
+        @click="router.push({ name: 'home', query: { page: i } })"
       >
         {{ i }}
       </button>
@@ -39,7 +39,7 @@ const props = defineProps<MetaInformation>()
         type="button"
         class="btn btn-outline-secondary"
         :disabled="props.pagination.page == props.pagination.pageCount"
-        @click="router.push(`/?page=${props.pagination.page + 1}`)"
+        @click="router.push({ name: 'home', query: { page: props.pagination.page + 1 } })"
       >
         Próximo
       </button>
@@ -47,7 +47,7 @@ const props = defineProps<MetaInformation>()
         type="button"
         class="btn btn-outline-secondary"
         :disabled="props.pagination.page == props.pagination.pageCount"
-        @click="router.push(`/?page=${props.pagination.pageCount}`)"
+        @click="router.push({ name: 'home', query: { page: props.pagination.pageCount } })"
       >
         Última
       </button>
