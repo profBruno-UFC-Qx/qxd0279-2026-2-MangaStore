@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
+import { useAuthStore } from '@/stores/authStore'
+import { RouterLink, useRouter } from 'vue-router'
+
+const router = useRouter()
+const authStore = useAuthStore()
+function logout() {
+  authStore.logout()
+
+  router.push({ name: 'home' })
+}
 </script>
 
 <template>
@@ -16,11 +25,17 @@ import { RouterLink } from 'vue-router'
             </p>
           </div>
           <div class="col-sm-4 offset-md-1 py-4">
-            <h4>Contact</h4>
+            <h4 v-if="authStore.username">{{ authStore.username }}</h4>
             <ul class="list-unstyled">
-              <li><a href="#" class="text-white">Follow on X</a></li>
-              <li><a href="#" class="text-white">Like on Facebook</a></li>
-              <li><a href="#" class="text-white">Email me</a></li>
+              <li v-if="authStore.isAdmin">
+                <router-link :to="{ name: 'admin' }" class="text-white">Administração</router-link>
+              </li>
+              <li v-if="!authStore.isAuthenticated">
+                <router-link :to="{ name: 'login' }" class="text-white">Login</router-link>
+              </li>
+              <li v-else>
+                <button class="btn btn-link text-white" @click="logout">Logout</button>
+              </li>
             </ul>
           </div>
         </div>
@@ -28,7 +43,7 @@ import { RouterLink } from 'vue-router'
     </div>
     <div class="navbar navbar-dark bg-dark shadow-sm">
       <div class="container">
-        <RouterLink to="/" class="navbar-brand d-flex align-items-center">
+        <RouterLink :to="{ name: 'home' }" class="navbar-brand d-flex align-items-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="20"
