@@ -4,12 +4,15 @@ import { AuthenticationService } from '@/api/AuthenticationService'
 import { ApiError } from '@/api/ApiError'
 import { TOKEN_KEY } from '@/api'
 
+const ADMIN_ROLE = 'admin'
+
 export const useAuthStore = defineStore('authStore', () => {
   const username = ref<string | null>(localStorage.getItem('username'))
   const jwt = ref<string | null>(localStorage.getItem(TOKEN_KEY))
   const role = ref<string | null>(localStorage.getItem('role'))
 
-  const isAdmin = computed(() => role.value == 'admin')
+  const isAuthenticated = computed(() => jwt.value !== null)
+  const isAdmin = computed(() => role.value === ADMIN_ROLE)
 
   async function authenticate(identifier: string, password: string) {
     const result = await AuthenticationService.login(identifier, password)
@@ -60,5 +63,5 @@ export const useAuthStore = defineStore('authStore', () => {
     localStorage.removeItem('role')
   }
 
-  return { username, isAdmin, authenticate, fetchMe, logout }
+  return { username, isAuthenticated, isAdmin, authenticate, fetchMe, logout }
 })

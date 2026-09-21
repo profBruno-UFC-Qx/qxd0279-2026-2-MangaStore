@@ -1,23 +1,9 @@
 import { request } from '.'
-
-type User = {
-  username: string
-  email: string
-  role?: Role
-}
-
-type Role = {
-  id: number
-  type: string
-}
+import type { User } from '@/types'
 
 type AuthResponse = {
   jwt: string
   user: User
-  error?: {
-    message: string
-    status: string
-  }
 }
 
 const me = (jwt: string) =>

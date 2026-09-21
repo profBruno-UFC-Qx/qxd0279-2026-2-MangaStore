@@ -27,7 +27,7 @@ function logout() {
           <div class="col-sm-4 offset-md-1 py-4">
             <h4 v-if="authStore.username">{{ authStore.username }}</h4>
             <ul class="list-unstyled">
-              <li v-if="!authStore.username">
+              <li v-if="!authStore.isAuthenticated">
                 <router-link to="/login" class="text-white">Login</router-link>
               </li>
               <li v-else>
