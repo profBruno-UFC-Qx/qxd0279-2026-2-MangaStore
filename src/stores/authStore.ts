@@ -35,10 +35,18 @@ export const useAuthStore = defineStore('authStore', () => {
     }
   }
 
+  function save(key: string, value: string | null) {
+    if (value) {
+      localStorage.setItem(key, value)
+    } else {
+      localStorage.removeItem(key)
+    }
+  }
+
   function persistState() {
-    localStorage.setItem('username', username.value!!)
-    localStorage.setItem('token', jwt.value!!)
-    localStorage.setItem('role', role.value!!)
+    save('username', username.value)
+    save('token', jwt.value)
+    save('role', role.value)
   }
 
   function logout() {
