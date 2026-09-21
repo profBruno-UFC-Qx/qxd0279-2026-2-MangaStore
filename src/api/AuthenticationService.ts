@@ -1,5 +1,4 @@
-import { useFetch } from '.'
-import { ApiError } from './ApiError'
+import { request } from '.'
 
 type User = {
   username: string
@@ -19,20 +18,6 @@ type AuthResponse = {
     message: string
     status: string
   }
-}
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await useFetch(path, init)
-  const result = await response.json()
-
-  if (!response.ok) {
-    if (response.status == 400) {
-      throw new ApiError(response.status, `${result.error?.message}`)
-    }
-    throw new ApiError(response.status, `Response status: ${response.status}`)
-  }
-
-  return result
 }
 
 const me = (jwt: string) =>

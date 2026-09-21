@@ -4,6 +4,7 @@ import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { useUpload } from '@/api'
 import type { Manga } from '@/types'
 import { MangaService } from '@/api/MangaService'
+import { ApiError } from '@/api/ApiError'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Alert from '@/components/Alert.vue'
 
@@ -26,6 +27,9 @@ async function loadManga(id: string) {
     const result = await MangaService.findById(id)
     manga.value = result.data
   } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
+      await router.replace('/notFound')
+    }
     error.value = (e as Error).message
   } finally {
     loading.value = false

@@ -2,10 +2,11 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { AuthenticationService } from '@/api/AuthenticationService'
 import { ApiError } from '@/api/ApiError'
+import { TOKEN_KEY } from '@/api'
 
 export const useAuthStore = defineStore('authStore', () => {
   const username = ref<string | null>(localStorage.getItem('username'))
-  const jwt = ref<string | null>(localStorage.getItem('token'))
+  const jwt = ref<string | null>(localStorage.getItem(TOKEN_KEY))
   const role = ref<string | null>(localStorage.getItem('role'))
 
   const isAdmin = computed(() => role.value == 'admin')
@@ -45,7 +46,7 @@ export const useAuthStore = defineStore('authStore', () => {
 
   function persistState() {
     save('username', username.value)
-    save('token', jwt.value)
+    save(TOKEN_KEY, jwt.value)
     save('role', role.value)
   }
 
@@ -55,7 +56,7 @@ export const useAuthStore = defineStore('authStore', () => {
     role.value = null
 
     localStorage.removeItem('username')
-    localStorage.removeItem('token')
+    localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem('role')
   }
 
