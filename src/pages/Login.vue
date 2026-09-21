@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import Alert from '@/components/Alert.vue'
 
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const identifier = ref('')
@@ -11,15 +12,25 @@ const password = ref('')
 const error = ref('')
 const loading = ref(false)
 
+function destination(): RouteLocationRaw {
+  const redirect = route.query.redirect
+
+  if (typeof redirect === 'string' && /^\/(?![/\\])/.test(redirect)) {
+    const { meta } = router.resolve(redirect)
+    if (!meta.requiresAuth || authStore.isAdmin) {
+      return redirect
+    }
+  }
+
+  return { name: authStore.isAdmin ? 'admin' : 'home' }
+}
+
 async function submit() {
+  error.value = ''
   loading.value = true
   try {
     await authStore.authenticate(identifier.value, password.value)
-    if (authStore.isAdmin) {
-      router.push({ name: 'admin' })
-    } else {
-      router.push({ name: 'home' })
-    }
+    router.push(destination())
   } catch (e) {
     error.value = (e as Error).message
   } finally {

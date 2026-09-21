@@ -53,7 +53,7 @@ router.beforeEach(async (to) => {
     await authStore.fetchMe()
 
     if (!authStore.isAdmin) {
-      return { name: 'login' }
+      return { name: 'login', query: { redirect: to.fullPath } }
     }
   }
 })
