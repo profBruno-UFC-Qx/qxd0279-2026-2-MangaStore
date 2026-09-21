@@ -30,7 +30,9 @@ export const useAuthStore = defineStore('authStore', () => {
     jwt.value = null
     role.value = null
 
-    localStorage.clear()
+    localStorage.removeItem('username')
+    localStorage.removeItem('token')
+    localStorage.removeItem('role')
   }
 
   return { username, isAdmin, authenticate, logout }
