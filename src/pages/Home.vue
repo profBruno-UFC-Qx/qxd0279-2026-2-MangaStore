@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { ref, onBeforeMount } from 'vue'
 import { onBeforeRouteUpdate, useRoute } from 'vue-router'
-import { type Manga } from '@/types'
+import type { Manga } from '@/types'
 import { MangaService, type MetaInformation } from '@/api/MangaService'
 import MangaCard from '@/components/MangaCard.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Alert from '@/components/Alert.vue'
 import PaginationContainer from '@/components/PaginationContainer.vue'
+import { useAlert } from '@/composables/useAlert'
 
 const route = useRoute()
 const mangas = ref<Manga[]>([])
 const loading = ref(true)
-const error = ref<string | null>(null)
+const { alertMessage, alertType, showError } = useAlert()
 const meta = ref<MetaInformation>({} as MetaInformation)
 
 async function loadMangas(page: number) {
@@ -20,7 +21,7 @@ async function loadMangas(page: number) {
     mangas.value = result.data
     meta.value = result.meta
   } catch (e) {
-    error.value = (e as Error).message
+    showError(e)
   } finally {
     loading.value = false
   }
@@ -36,7 +37,7 @@ onBeforeRouteUpdate(async (to, from) => {
 
 <template>
   <LoadingSpinner v-if="loading" label="Carregando mangás…" />
-  <Alert v-else-if="error" :message="error"></Alert>
+  <Alert v-else-if="alertMessage" :message="alertMessage" :type="alertType"></Alert>
   <template v-else>
     <PaginationContainer
       class="mb-3 d-flex justify-content-center"
