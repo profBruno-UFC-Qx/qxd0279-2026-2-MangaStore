@@ -77,7 +77,7 @@ async function deleteManga(id: number) {
 
 <template>
   <Alert v-if="alertMessage" :message="alertMessage" :type="alertType"></Alert>
-  <LoadingSpinner v-if="loading || deleting" label="Carregando mangás…" />
+  <LoadingSpinner v-if="loading" label="Carregando mangás…" />
   <template v-else>
     <table class="col-12 table table-striped" aria-label="Todos os mangás disponíveis">
       <thead>
@@ -119,6 +119,7 @@ async function deleteManga(id: number) {
       :content="`Você realmente deseja deletar o Mangá  ${selectedManga?.title}`"
       confirm-label="Deletar"
       cancel-label="Cancelar"
+      :confirming="deleting"
       @close="closeModal"
       @confirm="saveAndClose"
     />

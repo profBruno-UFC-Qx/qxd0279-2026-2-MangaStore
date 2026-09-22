@@ -6,10 +6,12 @@ withDefaults(
     visible: boolean
     confirmLabel?: string
     cancelLabel?: string
+    confirming?: boolean
   }>(),
   {
     confirmLabel: 'Confirmar',
     cancelLabel: 'Cancelar',
+    confirming: false,
   },
 )
 
@@ -21,7 +23,11 @@ const emit = defineEmits<{
 
 <template>
   <div v-if="visible" class="modal-backdrop show"></div>
-  <div class="modal" :class="{ 'd-block': visible }" @click.self="emit('close')">
+  <div
+    class="modal"
+    :class="{ 'd-block': visible }"
+    @click.self="!confirming && emit('close')"
+  >
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -30,6 +36,7 @@ const emit = defineEmits<{
             type="button"
             class="btn-close"
             aria-label="Close"
+            :disabled="confirming"
             @click="emit('close')"
           ></button>
         </div>
@@ -39,11 +46,27 @@ const emit = defineEmits<{
           </p>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" @click="emit('close')">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="confirming"
+            @click="emit('close')"
+          >
             {{ cancelLabel }}
           </button>
-          <button type="button" class="btn btn-primary" @click="emit('confirm')">
-            {{ confirmLabel }}
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="confirming"
+            @click="emit('confirm')"
+          >
+            <span
+              v-if="confirming"
+              class="spinner-border spinner-border-sm me-1"
+              role="status"
+              aria-hidden="true"
+            ></span>
+            {{ confirming ? 'Deletando…' : confirmLabel }}
           </button>
         </div>
       </div>
