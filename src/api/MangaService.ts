@@ -18,4 +18,10 @@ export const MangaService = {
     ),
 
   findById: (id: number | string) => request<StrapiResponse<Manga>>(`/mangas/${id}?populate=cover`),
+
+  deleteById: (id: number | string) =>
+    request<StrapiResponse<Manga>>(`/mangas/${id}`, {
+      method: 'DELETE',
+      auth: true,
+    }),
 }

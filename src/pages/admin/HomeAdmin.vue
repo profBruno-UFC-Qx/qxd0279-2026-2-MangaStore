@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onBeforeMount, computed } from 'vue'
-import { type Manga } from '@/types'
+import { AlertType, type Manga } from '@/types'
 import { MangaService, type MetaInformation } from '@/api/MangaService'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Alert from '@/components/Alert.vue'
@@ -9,9 +9,13 @@ import { useUpload } from '@/api'
 const mangas = ref<Manga[]>([])
 const loading = ref(true)
 const loadingMore = ref(false)
-const error = ref<string | null>(null)
+const alertMessage = ref<string | null>(null)
+const alertType = ref<AlertType>(AlertType.Danger)
 const meta = ref<MetaInformation>({} as MetaInformation)
 const page = ref<number>(1)
+const selectedManga = ref<Manga | null>(null)
+const showModal = computed(() => selectedManga.value != null)
+const deleting = ref(false)
 
 async function loadMangas(page: number) {
   try {
@@ -19,7 +23,8 @@ async function loadMangas(page: number) {
     mangas.value = mangas.value.concat(result.data)
     meta.value = result.meta
   } catch (e) {
-    error.value = (e as Error).message
+    alertMessage.value = (e as Error).message
+    alertType.value = AlertType.Danger
   } finally {
     loading.value = false
   }
@@ -37,11 +42,41 @@ async function goToNextPage() {
     loadingMore.value = false
   }
 }
+
+function openModal(manga: Manga) {
+  selectedManga.value = manga
+}
+
+function closeModal() {
+  selectedManga.value = null
+}
+
+async function saveAndClose() {
+  if (selectedManga.value) {
+    await deleteManga(selectedManga.value?.id)
+  }
+  closeModal()
+}
+
+async function deleteManga(id: number) {
+  try {
+    deleting.value = true
+    await MangaService.deleteById(id)
+    mangas.value = mangas.value.filter((m) => m.id != id)
+    alertType.value = AlertType.Success
+    alertMessage.value = 'Manga deletado com sucesso'
+  } catch (e) {
+    alertMessage.value = (e as Error).message
+    alertType.value = AlertType.Danger
+  } finally {
+    deleting.value = false
+  }
+}
 </script>
 
 <template>
+  <Alert v-if="alertMessage" :message="alertMessage" :type="alertType"></Alert>
   <LoadingSpinner v-if="loading" label="Carregando mangás…" />
-  <Alert v-else-if="error" :message="error"></Alert>
   <template v-else>
     <table class="col-12 table table-striped" aria-label="Todos os mangás disponíveis">
       <thead>
@@ -70,13 +105,51 @@ async function goToNextPage() {
             <button class="btn btn-sm btn-warning mx-1" title="Editar manga">
               <i class="bi bi-pencil"></i>
             </button>
-            <button class="btn btn-danger btn-sm" title="Remover manga">
+            <button class="btn btn-danger btn-sm" title="Remover manga" @click="openModal(manga)">
               <i class="bi bi-trash"></i>
             </button>
           </td>
         </tr>
       </tbody>
     </table>
+    <div class="modal" :class="{ 'd-block': showModal }">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 v-if="deleting" class="modal-title">Deletando o mangá</h5>
+            <template v-else>
+              <h5 class="modal-title">Confirmação</h5>
+              <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+                @click="closeModal"
+              ></button>
+            </template>
+          </div>
+          <div class="modal-body">
+            <LoadingSpinner v-if="deleting" label="Deletando o mangá escolhido" />
+            <p v-else>
+              Você realmente deseja deletar o Mangá <strong>{{ selectedManga?.title }}</strong>
+            </p>
+          </div>
+          <div v-if="!deleting" class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+              @click="closeModal"
+            >
+              Close
+            </button>
+            <button type="button" class="btn btn-primary" @click="saveAndClose">
+              Save changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </template>
 </template>
 

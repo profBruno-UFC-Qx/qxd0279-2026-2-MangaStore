@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onBeforeMount } from 'vue'
 import { onBeforeRouteUpdate, useRoute } from 'vue-router'
-import { type Manga } from '@/types'
+import { AlertType, type Manga } from '@/types'
 import { MangaService, type MetaInformation } from '@/api/MangaService'
 import MangaCard from '@/components/MangaCard.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
@@ -36,7 +36,7 @@ onBeforeRouteUpdate(async (to, from) => {
 
 <template>
   <LoadingSpinner v-if="loading" label="Carregando mangás…" />
-  <Alert v-else-if="error" :message="error"></Alert>
+  <Alert v-else-if="error" :message="error" :type="AlertType.Danger"></Alert>
   <template v-else>
     <PaginationContainer
       class="mb-3 d-flex justify-content-center"
