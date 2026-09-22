@@ -6,12 +6,12 @@ import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Alert from '@/components/Alert.vue'
 import { useUpload } from '@/api'
 import Modal from '@/components/Modal.vue'
+import { useAlert } from '@/composables/useAlert'
 
 const mangas = ref<Manga[]>([])
 const loading = ref(true)
 const loadingMore = ref(false)
-const alertMessage = ref<string | null>(null)
-const alertType = ref<AlertType>(AlertType.Danger)
+const { alertMessage, alertType, showAlert, showError } = useAlert()
 const meta = ref<MetaInformation>({} as MetaInformation)
 const page = ref<number>(1)
 const selectedManga = ref<Manga | null>(null)
@@ -24,10 +24,22 @@ async function loadMangas(page: number) {
     mangas.value = mangas.value.concat(result.data)
     meta.value = result.meta
   } catch (e) {
-    alertMessage.value = (e as Error).message
-    alertType.value = AlertType.Danger
+    showError(e)
   } finally {
     loading.value = false
+  }
+}
+
+async function deleteManga(id: number) {
+  try {
+    deleting.value = true
+    await MangaService.deleteById(id)
+    mangas.value = mangas.value.filter((m) => m.id != id)
+    showAlert('Manga deletado com sucesso', AlertType.Success)
+  } catch (e) {
+    showError(e)
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -52,26 +64,11 @@ function closeModal() {
   selectedManga.value = null
 }
 
-async function saveAndClose() {
+async function deleteAndClose() {
   if (selectedManga.value) {
     await deleteManga(selectedManga.value?.id)
   }
   closeModal()
-}
-
-async function deleteManga(id: number) {
-  try {
-    deleting.value = true
-    await MangaService.deleteById(id)
-    mangas.value = mangas.value.filter((m) => m.id != id)
-    alertType.value = AlertType.Success
-    alertMessage.value = 'Manga deletado com sucesso'
-  } catch (e) {
-    alertMessage.value = (e as Error).message
-    alertType.value = AlertType.Danger
-  } finally {
-    deleting.value = false
-  }
 }
 </script>
 
@@ -121,7 +118,7 @@ async function deleteManga(id: number) {
       cancel-label="Cancelar"
       :confirming="deleting"
       @close="closeModal"
-      @confirm="saveAndClose"
+      @confirm="deleteAndClose"
     />
   </template>
 </template>
