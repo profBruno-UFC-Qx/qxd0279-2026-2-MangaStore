@@ -117,6 +117,8 @@ async function deleteManga(id: number) {
       title="Confirmação"
       :visible="showModal"
       :content="`Você realmente deseja deletar o Mangá  ${selectedManga?.title}`"
+      confirm-label="Deletar"
+      cancel-label="Cancelar"
       @close="closeModal"
       @confirm="saveAndClose"
     />

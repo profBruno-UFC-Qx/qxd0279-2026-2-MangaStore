@@ -1,9 +1,17 @@
 <script setup lang="ts">
-defineProps<{
-  title: string
-  content: string
-  visible: boolean
-}>()
+withDefaults(
+  defineProps<{
+    title: string
+    content: string
+    visible: boolean
+    confirmLabel?: string
+    cancelLabel?: string
+  }>(),
+  {
+    confirmLabel: 'Confirmar',
+    cancelLabel: 'Cancelar',
+  },
+)
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -12,7 +20,8 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="modal" :class="{ 'd-block': visible }">
+  <div v-if="visible" class="modal-backdrop show"></div>
+  <div class="modal" :class="{ 'd-block': visible }" @click.self="emit('close')">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -20,7 +29,6 @@ const emit = defineEmits<{
           <button
             type="button"
             class="btn-close"
-            data-bs-dismiss="modal"
             aria-label="Close"
             @click="emit('close')"
           ></button>
@@ -31,16 +39,11 @@ const emit = defineEmits<{
           </p>
         </div>
         <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            data-bs-dismiss="modal"
-            @click="emit('close')"
-          >
-            Close
+          <button type="button" class="btn btn-secondary" @click="emit('close')">
+            {{ cancelLabel }}
           </button>
           <button type="button" class="btn btn-primary" @click="emit('confirm')">
-            Save changes
+            {{ confirmLabel }}
           </button>
         </div>
       </div>
