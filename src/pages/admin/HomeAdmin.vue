@@ -5,6 +5,7 @@ import { MangaService, type MetaInformation } from '@/api/MangaService'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Alert from '@/components/Alert.vue'
 import { useUpload } from '@/api'
+import Modal from '@/components/Modal.vue'
 
 const mangas = ref<Manga[]>([])
 const loading = ref(true)
@@ -76,7 +77,7 @@ async function deleteManga(id: number) {
 
 <template>
   <Alert v-if="alertMessage" :message="alertMessage" :type="alertType"></Alert>
-  <LoadingSpinner v-if="loading" label="Carregando mangás…" />
+  <LoadingSpinner v-if="loading || deleting" label="Carregando mangás…" />
   <template v-else>
     <table class="col-12 table table-striped" aria-label="Todos os mangás disponíveis">
       <thead>
@@ -112,44 +113,13 @@ async function deleteManga(id: number) {
         </tr>
       </tbody>
     </table>
-    <div class="modal" :class="{ 'd-block': showModal }">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 v-if="deleting" class="modal-title">Deletando o mangá</h5>
-            <template v-else>
-              <h5 class="modal-title">Confirmação</h5>
-              <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-                @click="closeModal"
-              ></button>
-            </template>
-          </div>
-          <div class="modal-body">
-            <LoadingSpinner v-if="deleting" label="Deletando o mangá escolhido" />
-            <p v-else>
-              Você realmente deseja deletar o Mangá <strong>{{ selectedManga?.title }}</strong>
-            </p>
-          </div>
-          <div v-if="!deleting" class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-              @click="closeModal"
-            >
-              Close
-            </button>
-            <button type="button" class="btn btn-primary" @click="saveAndClose">
-              Save changes
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Modal
+      title="Confirmação"
+      :visible="showModal"
+      :content="`Você realmente deseja deletar o Mangá  ${selectedManga?.title}`"
+      @close="closeModal"
+      @confirm="saveAndClose"
+    />
   </template>
 </template>
 
