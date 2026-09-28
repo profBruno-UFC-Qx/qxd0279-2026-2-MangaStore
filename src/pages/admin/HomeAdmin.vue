@@ -14,7 +14,7 @@ const mangas = ref<Manga[]>([])
 const loading = ref(true)
 const loadingMore = ref(false)
 const { alertMessage, alertType, showAlert, showError } = useAlert()
-const meta = ref<MetaInformation>({} as MetaInformation)
+const meta = ref<MetaInformation | null>(null)
 const page = ref<number>(1)
 const selectedManga = ref<Manga | null>(null)
 const showModal = computed(() => selectedManga.value != null)
@@ -52,7 +52,7 @@ onBeforeMount(async () => {
   await loadMangas(page.value)
 })
 
-const hasNextPage = computed(() => page.value < meta.value.pagination.pageCount)
+const hasNextPage = computed(() => page.value < (meta.value?.pagination.pageCount ?? 0))
 
 async function goToNextPage() {
   if (hasNextPage.value) {
