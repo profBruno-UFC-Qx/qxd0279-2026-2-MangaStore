@@ -1,10 +1,11 @@
-# MangaStore — uma vitrine Vue 3 que amadurece do `fetch` na página à camada de serviço, à autenticação e aos componentes reutilizáveis
+# MangaStore — uma vitrine Vue 3 que amadurece do `fetch` na página à camada de serviço, à autenticação, ao CRUD e aos composables
 
 Projeto didático da disciplina de Desenvolvimento Web (QXD0279). É uma _single-page
 application_ em **Vue 3 + Vite + TypeScript** que consome uma API REST (um back-end
-[Strapi](https://strapi.io/) rodando em `http://localhost:1337`) para listar mangás,
-mostrar os detalhes de cada um e, mais adiante, autenticar usuários e proteger uma
-área administrativa.
+[Strapi](https://strapi.io/) rodando em `http://localhost:1337`). O código ensina,
+nesta ordem, a isolar o acesso à API, a deixar a rota guardar o estado, a proteger
+rotas com Pinia e _navigation guards_ e, por fim, a escrever telas de escrita
+(criar, editar, remover) extraindo a lógica repetida em componentes e _composables_.
 
 ---
 
@@ -13,8 +14,18 @@ mostrar os detalhes de cada um e, mais adiante, autenticar usuários e proteger 
 Partimos de componentes que chamam `fetch` diretamente e montam a URL na mão;
 chegamos a uma aplicação com camada de acesso a dados isolada, tratamento de
 carregamento/erro/404, componentes de UI reaproveitáveis dirigidos por rota,
-estado global com Pinia e um fluxo de autenticação que sobrevive a um F5 e
-resiste a alguém editar o `localStorage` na mão.
+estado global com Pinia, um fluxo de autenticação que sobrevive a um F5 e
+resiste a alguém editar o `localStorage` na mão, e uma área administrativa com
+CRUD cuja lógica de estado mora em _composables_.
+
+Os estágios se agrupam nas tags do repositório — use-as para fazer `git checkout`
+na versão que o texto descreve:
+
+| Tag | Branch mesclada | Estágios |
+|---|---|---|
+| `v0.1` | `pagina-de-detalhes-manga` | 1 a 6 — leitura do catálogo |
+| `v0.2` | `autenticacao_e_autorizacao` | 7 a 11 — autenticação e autorização |
+| `v0.3` | `crud_manga` | 12 a 16 — CRUD administrativo e composables |
 
 ### 1. Ponto de partida: uma SPA roteada com Vue 3 + Vite + TypeScript
 
@@ -737,15 +748,441 @@ async function submit() {
   comum barrado em `/admin` seria devolvido para `/admin` de novo assim que
   logasse — criando um loop, já que ele nunca deixa de ser um usuário comum.
 
+### 12. Listagem administrativa com carregamento incremental ("Ver mais")
+
+A tabela de `/admin` reaproveitava a paginação da vitrine: `?page=N` na URL e a
+lista inteira trocada a cada página. Para uma tela de gestão, o que se quer é
+rolar a tabela e ir **acumulando** registros. A página atual sai da URL e vira
+estado local; o resultado de cada busca é concatenado ao que já existe.
+
+```ts
+// src/pages/admin/HomeAdmin.vue (v0.3) — a página é estado local, e a lista cresce
+const loadingMore = ref(false)
+const meta = ref<MetaInformation | null>(null)
+const page = ref<number>(1)
+
+async function loadMangas(page: number) {
+  try {
+    const result = await MangaService.findAll(page || 1)
+    mangas.value = mangas.value.concat(result.data)
+    meta.value = result.meta
+  } catch (e) {
+    showError(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+const hasNextPage = computed(() => page.value < (meta.value?.pagination.pageCount ?? 0))
+
+async function goToNextPage() {
+  if (hasNextPage.value) {
+    page.value = page.value + 1
+    loadingMore.value = true
+    await loadMangas(page.value)
+    loadingMore.value = false
+  }
+}
+```
+
+```vue
+<!-- src/pages/admin/HomeAdmin.vue (v0.3) — o rodapé da tabela tem três estados -->
+<tfoot>
+  <tr>
+    <td colspan="3" class="text-center">
+      <LoadingSpinner v-if="loadingMore" label="Carregando mangás…" />
+      <button v-else-if="hasNextPage" class="btn btn-secondary" @click="goToNextPage">
+        Ver mais
+      </button>
+      <span v-else>Não há mais mangás</span>
+    </td>
+  </tr>
+</tfoot>
+```
+
+**Por que não reaproveitar `?page=` como na vitrine?**
+
+- Na vitrine, a página é algo que o usuário quer **compartilhar** ("olha a página
+  3"); na lista administrativa, é só um cursor de leitura. Guardar esse cursor na
+  URL faria `onBeforeRouteUpdate` trocar a lista inteira — o oposto de acumular.
+- Dois _flags_ separados, `loading` e `loadingMore`: o primeiro esconde a tabela
+  inteira na primeira carga; o segundo troca só o botão do rodapé por um
+  _spinner_, sem apagar os registros que o usuário já está vendo.
+- `meta` passa de `{} as MetaInformation` para `MetaInformation | null`. O _cast_
+  antigo mentia ao compilador (dizia que `pagination` existia antes da resposta
+  chegar); com `null`, o `?.` e o `?? 0` em `hasNextPage` são obrigatórios, não
+  opcionais.
+
+### 13. Remoção com confirmação: um `Modal` controlado por props e eventos
+
+Remover um mangá é irreversível, então o botão da lixeira não apaga direto: abre
+um diálogo de confirmação. O diálogo é um componente próprio, sem o JavaScript do
+Bootstrap — só as classes CSS dele, com a visibilidade decidida pelo Vue.
+
+```vue
+<!-- src/components/Modal.vue (v0.3) — o pai decide se está visível e o que fazer ao confirmar -->
+<script setup lang="ts">
+withDefaults(
+  defineProps<{
+    title: string
+    content: string
+    visible: boolean
+    confirmLabel?: string
+    cancelLabel?: string
+    confirming?: boolean
+  }>(),
+  {
+    confirmLabel: 'Confirmar',
+    cancelLabel: 'Cancelar',
+    confirming: false,
+  },
+)
+
+const emit = defineEmits<{
+  (e: 'close'): void
+  (e: 'confirm'): void
+}>()
+</script>
+
+<template>
+  <div v-if="visible" class="modal-backdrop show"></div>
+  <div
+    class="modal"
+    :class="{ 'd-block': visible }"
+    @click.self="!confirming && emit('close')"
+  >
+    <!-- ... cabeçalho, corpo e rodapé com os dois botões ... -->
+  </div>
+</template>
+```
+
+```ts
+// src/pages/admin/HomeAdmin.vue (v0.3) — o mangá selecionado É o estado do modal
+const selectedManga = ref<Manga | null>(null)
+const showModal = computed(() => selectedManga.value != null)
+const deleting = ref(false)
+
+async function deleteManga(id: number) {
+  try {
+    deleting.value = true
+    await MangaService.deleteById(id)
+    mangas.value = mangas.value.filter((m) => m.id != id)
+    showAlert('Manga deletado com sucesso', AlertType.Success)
+  } catch (e) {
+    showError(e)
+  } finally {
+    deleting.value = false
+  }
+}
+```
+
+```vue
+<!-- src/pages/admin/HomeAdmin.vue (v0.3) -->
+<Modal
+  title="Confirmação"
+  :visible="showModal"
+  :content="`Você realmente deseja deletar o Mangá  ${selectedManga?.title}`"
+  confirm-label="Deletar"
+  cancel-label="Cancelar"
+  :confirming="deleting"
+  @close="closeModal"
+  @confirm="deleteAndClose"
+/>
+```
+
+**Por que um componente controlado, e não o `data-bs-toggle` do Bootstrap?**
+
+- Com `data-bs-toggle="modal"`, quem abre e fecha o diálogo é o JavaScript do
+  Bootstrap, fora da reatividade do Vue — o componente não saberia qual mangá
+  foi escolhido nem conseguiria fechá-lo depois da remoção. Com `visible` como
+  prop, o Vue é a única fonte de verdade.
+- `showModal` é **derivado** de `selectedManga`, não um `ref<boolean>` à parte.
+  Um _flag_ separado permitiria o estado impossível "modal aberto sem mangá
+  selecionado"; derivando, abrir é selecionar e fechar é limpar a seleção.
+- O modal **emite** `confirm` em vez de receber uma função `onConfirm` para
+  chamar: ele não sabe o que está sendo confirmado, e por isso o mesmo componente
+  serve para qualquer ação destrutiva futura. `confirmLabel`/`cancelLabel` com
+  `withDefaults` reforçam essa generalidade.
+- A prop `confirming` desabilita os botões e o clique no fundo (`@click.self`)
+  enquanto o `DELETE` está em voo — sem isso, um segundo clique dispararia uma
+  segunda requisição para um recurso que já não existe.
+- Depois de apagar no servidor, a lista local é filtrada
+  (`mangas.value.filter(...)`) em vez de recarregada: a resposta de sucesso já é
+  prova suficiente, e recarregar descartaria as páginas que o "Ver mais" acumulou.
+
+### 14. O composable `useAlert` e um `Alert` com tipo
+
+Até aqui, toda página repetia o par `const error = ref<string | null>(null)` +
+`error.value = (e as Error).message`, e o `Alert` só sabia ser vermelho. Com o
+CRUD aparecem mensagens de **sucesso** ("Manga deletado com sucesso"), e o
+padrão se repetiria em três páginas. A lógica vira um _composable_ e o `Alert`
+ganha um tipo.
+
+```ts
+// src/types/index.ts (v0.3)
+export enum AlertType {
+  Danger = 'danger',
+  Warning = 'warning',
+  Success = 'success',
+}
+```
+
+```ts
+// src/composables/useAlert.ts (v0.3)
+export function useAlert() {
+  const alertMessage = ref<string | null>(null)
+  const alertType = ref<AlertType>(AlertType.Danger)
+
+  function showAlert(message: string, type: AlertType = AlertType.Danger) {
+    alertType.value = type
+    alertMessage.value = message
+  }
+
+  function showError(error: unknown) {
+    showAlert((error as Error).message)
+  }
+
+  return { alertMessage, alertType, showAlert, showError }
+}
+```
+
+```vue
+<!-- src/components/Alert.vue (v0.3) — o tipo vira a classe do Bootstrap -->
+<script setup lang="ts">
+import { AlertType } from '@/types'
+
+const props = withDefaults(defineProps<{ message: string; type?: AlertType }>(), {
+  type: AlertType.Danger,
+})
+</script>
+
+<template>
+  <div class="alert" role="alert" :class="`alert-${props.type}`">
+    {{ props.message }}
+  </div>
+</template>
+```
+
+**Por que um composable, e não uma store Pinia ou um _mixin_?**
+
+- Cada chamada de `useAlert()` cria **refs novos**: o alerta da `Home` não vaza
+  para o `HomeAdmin`. Uma store Pinia seria um único alerta global — útil para
+  _toasts_, errado para uma mensagem que pertence a uma tela.
+- Diferente de um _mixin_ (Options API), o composable deixa explícito de onde
+  vem cada nome: `const { alertMessage, showError } = useAlert()` — nada aparece
+  no `this` por mágica, e o TypeScript infere tudo.
+- Os valores do `enum` são exatamente os sufixos das classes do Bootstrap
+  (`alert-danger`, `alert-success`), então `` `alert-${props.type}` `` monta a
+  classe sem `switch`. E `withDefaults` com `AlertType.Danger` mantém funcionando
+  todo `<Alert :message="error" />` antigo, que não passa `type`.
+
+### 15. Um formulário para criar e editar, sob rotas aninhadas
+
+Criar e editar um mangá pedem os mesmos campos. Em vez de duas páginas, existe
+um único `MangaForm.vue`, montado por duas rotas; a presença de `:id` na rota é o
+que diz em qual modo ele está. As rotas nascem **filhas** de `/admin`.
+
+```ts
+// src/router/index.ts (v0.3) — o meta do pai vale para todos os filhos
+{
+  path: '/admin',
+  meta: { requiresAuth: true },
+  children: [
+    { path: '', name: 'admin', component: HomeAdmin },
+    { path: 'manga/new', name: 'manga-new', component: MangaForm },
+    { path: 'manga/:id/edit', name: 'manga-edit', component: MangaForm },
+  ],
+},
+```
+
+```ts
+// src/api/MangaService.ts (v0.3) — o tipo de entrada e o envio multipart
+export type MangaInput = Omit<Manga, 'id' | 'cover'>
+
+function toFormData(data: MangaInput, cover?: File) {
+  const formData = new FormData()
+  formData.append('data', JSON.stringify(data))
+  if (cover) formData.append('files.cover', cover)
+  return formData
+}
+
+// dentro de MangaService:
+create: (data: MangaInput, cover: File) =>
+  request<StrapiResponse<Manga>>('/mangas', {
+    method: 'POST',
+    body: toFormData(data, cover),
+    auth: true,
+  }),
+
+update: (id: number | string, data: MangaInput, cover?: File) =>
+  request<StrapiResponse<Manga>>(`/mangas/${id}`, {
+    method: 'PUT',
+    body: toFormData(data, cover),
+    auth: true,
+  }),
+```
+
+```ts
+// src/pages/admin/MangaForm.vue (v0.3) — o modo é derivado da rota
+const mangaId = computed(() => route.params.id as string | undefined)
+const isEditing = computed(() => !!mangaId.value)
+const canSubmit = computed(() => isEditing.value || !!cover.value)
+
+function handleFileUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  cover.value = target.files?.[0]
+
+  URL.revokeObjectURL(coverPreview.value)
+  coverPreview.value = cover.value ? URL.createObjectURL(cover.value) : ''
+}
+
+async function submit() {
+  if (canSubmit.value) {
+    saving.value = true
+    try {
+      if (mangaId.value) {
+        await MangaService.update(mangaId.value, form.value, cover.value)
+      } else {
+        await MangaService.create(form.value, cover.value!)
+      }
+      const message = isEditing.value
+        ? 'Manga atualizado com sucesso'
+        : 'Manga adicionado com sucesso'
+      await router.push({ name: 'admin', state: { message } })
+    } catch (e) {
+      showError(e)
+    } finally {
+      saving.value = false
+    }
+  }
+}
+```
+
+```ts
+// src/pages/admin/HomeAdmin.vue (v0.3) — a lista lê a mensagem deixada pelo formulário
+onBeforeMount(async () => {
+  if (history.state?.message) {
+    showAlert(history.state.message, AlertType.Success)
+  }
+  await loadMangas(page.value)
+})
+```
+
+**Por que um formulário só, rotas filhas e `history.state`?**
+
+- **Rotas aninhadas herdam o `meta`.** O Vue Router junta o `meta` de todos os
+  registros casados em `to.meta`, então o `requiresAuth: true` escrito uma vez no
+  pai protege `/admin/manga/new` e `/admin/manga/5/edit` sem nenhuma alteração no
+  `beforeEach` do estágio 9. Declarar o `meta` em cada rota seria um esquecimento
+  esperando para acontecer.
+- **`Omit<Manga, 'id' | 'cover'>` em vez de um tipo escrito à mão.** O formulário
+  envia exatamente os campos do domínio menos os que o servidor controla; se
+  `Manga` ganhar um campo, `MangaInput` ganha junto.
+- **`FormData` em vez de JSON**, porque a capa é um arquivo. O Strapi espera o
+  JSON na parte `data` e o arquivo em `files.<campo>`. E o `request<T>` do
+  estágio 10 não precisou mudar: sem `Content-Type` fixo, o navegador define o
+  `multipart/form-data` com o _boundary_ correto sozinho.
+- **`canSubmit`** codifica a regra de negócio assimétrica: criar exige capa,
+  editar não (se nenhum arquivo for escolhido, `update` manda só `data` e a capa
+  atual fica).
+- **`URL.createObjectURL`** mostra a prévia da imagem sem enviá-la; cada chamada
+  segura o arquivo na memória, por isso o `revokeObjectURL` antes de criar outra
+  e no `onBeforeUnmount`.
+- **`<fieldset :disabled="loading || saving">`** trava todos os campos de uma vez,
+  em vez de um `:disabled` por `input`.
+- **`router.push({ ..., state: { message } })`** entrega a mensagem de sucesso à
+  próxima página sem sujá-la na URL (um `?msg=...` reapareceria a cada F5 ou link
+  compartilhado) e sem criar estado global só para isso.
+
+### 16. `useManga`: a carga de um mangá deixa de ser copiada
+
+`MangaDetail.vue` já tinha a função `loadManga` com `loading`, `error` e o
+redirecionamento para `not-found` no 404. O `MangaForm` em modo edição precisava
+exatamente da mesma coisa. Em vez de copiar, ela vira um _composable_.
+
+```ts
+// src/composables/useManga.ts (v0.3)
+export function useManga() {
+  const router = useRouter()
+  const manga = ref<Manga | null>(null)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  async function loadManga(id: string) {
+    loading.value = true
+    error.value = null
+    try {
+      const { data } = await MangaService.findById(id)
+      manga.value = data
+      return data
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) {
+        await router.replace({ name: 'not-found' })
+      } else {
+        error.value = (e as Error).message
+      }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return { manga, loading, error, loadManga }
+}
+```
+
+```ts
+// src/pages/MangaDetail.vue (v0.3) — a página só consome
+const { manga, loading, error, loadManga } = useManga()
+
+onBeforeMount(async () => loadManga(route.params.id as string))
+```
+
+```ts
+// src/pages/admin/MangaForm.vue (v0.3) — o formulário reaproveita e copia só os campos editáveis
+const { manga, loading, error: loadError, loadManga } = useManga()
+
+onBeforeMount(async () => {
+  if (mangaId.value) {
+    const data = await loadManga(mangaId.value)
+    if (data) {
+      const { title, summary, number, price } = data
+      form.value = { title, summary, number, price }
+    } else if (loadError.value) {
+      showAlert(loadError.value)
+    }
+  }
+})
+```
+
+**Por que extrair agora, e por que o composable chama `useRouter()`?**
+
+- É a terceira vez que o repositório aplica a mesma regra: `PaginationContainer`
+  (estágio 6) e `request<T>` (estágio 10) também só foram extraídos quando o
+  segundo uso apareceu.
+- A extração corrigiu um detalhe de passagem: antes, um 404 fazia o
+  `router.replace` **e** preenchia `error` logo em seguida; agora é um ou outro
+  (`if / else`). E `loading` passa a começar em `false` e a ser ligado dentro de
+  `loadManga`, porque no `MangaForm` em modo criação a função nunca é chamada.
+- `useRouter()` dentro do composable funciona porque ele é chamado durante o
+  `setup` do componente — a mesma restrição de qualquer `use*` do Vue. Chamá-lo
+  fora de um `setup` (numa função utilitária comum) quebraria.
+- `loadManga` **retorna** o dado além de guardá-lo em `manga`: o formulário
+  precisa copiar os campos para o `form` uma única vez, e não reagir a cada
+  mudança de `manga`. O `form` é uma cópia editável, não uma referência ao objeto
+  que veio do servidor.
+
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
 - **Vue 3 (`<script setup>`):** framework de UI. Toda a tipagem de props vem de
-  `defineProps<T>()` sobre os tipos do domínio.
-- **Vue Router 4:** roteamento no cliente. Rotas nomeadas, parâmetro dinâmico
-  `:id`, rota curinga 404, o gancho `onBeforeRouteUpdate` e um guard global
-  (`router.beforeEach`) que protege `/admin` por `meta.requiresAuth`.
+  `defineProps<T>()` sobre os tipos do domínio; eventos tipados com
+  `defineEmits<T>()`; lógica de estado reaproveitável em _composables_
+  (`useAlert`, `useManga`).
+- **Vue Router 4:** roteamento no cliente. Rotas nomeadas e aninhadas, parâmetro
+  dinâmico `:id`, rota curinga 404, o gancho `onBeforeRouteUpdate`, `state` na
+  navegação e um guard global (`router.beforeEach`) que protege `/admin` e seus
+  filhos por `meta.requiresAuth`.
 - **Pinia:** estado global via _setup store_ (`useAuthStore`), com o estado de
   autenticação persistido em `localStorage` e revalidado no servidor a cada
   navegação para uma rota protegida.
@@ -809,6 +1246,18 @@ npm run format       # prettier em src/
 - **No estágio 11, entenda por que `destination()` valida o `redirect` da query
   em vez de usá-lo direto.** É um exemplo pequeno e concreto de por que nunca se
   deve confiar em dado vindo da URL sem checagem, mesmo quando parece inofensivo.
+- **Compare a paginação da `Home` (estágio 6) com o "Ver mais" do `HomeAdmin`
+  (estágio 12).** O mesmo `MangaService.findAll(page)` serve às duas; o que muda
+  é onde a página atual mora — na URL ou num `ref` — e por quê.
+- **Leia o `Modal` (estágio 13) sem olhar o `HomeAdmin`.** Repare que ele não sabe
+  que está deletando um mangá. Depois pense em outra ação que poderia usá-lo sem
+  mudar uma linha dele.
+- **Troque `useAlert` por uma store Pinia de cabeça.** O que aconteceria com o
+  alerta de erro da `Home` quando o usuário navegasse para `/admin`? Essa resposta
+  é o critério para escolher entre composable e store.
+- **Faça `git diff v0.2 v0.3 -- src/pages/MangaDetail.vue`.** A página encolhe
+  porque a lógica foi para `useManga` — e é o mesmo princípio de "extrair no
+  segundo uso" que você já viu nos estágios 6 e 10, agora aplicado a estado.
 
 ---
 
