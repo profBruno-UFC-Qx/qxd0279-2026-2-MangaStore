@@ -6,12 +6,25 @@ import Login from '@/pages/Login.vue'
 import Register from '@/pages/Register.vue'
 import NotFound from '@/pages/NotFound.vue'
 import HomeAdmin from '@/pages/admin/HomeAdmin.vue'
+import MangaForm from '@/pages/admin/MangaForm.vue'
 
 const routes = [
   {
     path: '/',
     name: 'home',
     component: Home,
+  },
+  {
+    path: '/manga/new',
+    name: 'manga-new',
+    component: MangaForm,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/manga/edit/:id',
+    name: 'manga-edit',
+    component: MangaForm,
+    meta: { requiresAuth: true },
   },
   {
     path: '/manga/:id',

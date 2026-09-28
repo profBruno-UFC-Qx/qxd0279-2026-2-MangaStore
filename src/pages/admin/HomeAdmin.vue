@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { ref, onBeforeMount, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { AlertType, type Manga } from '@/types'
 import { MangaService, type MetaInformation } from '@/api/MangaService'
+import { useAlert } from '@/composables/useAlert'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Alert from '@/components/Alert.vue'
 import { useUpload } from '@/api'
 import Modal from '@/components/Modal.vue'
-import { useAlert } from '@/composables/useAlert'
 
+const router = useRouter()
 const mangas = ref<Manga[]>([])
 const loading = ref(true)
 const loadingMore = ref(false)
@@ -43,7 +45,12 @@ async function deleteManga(id: number) {
   }
 }
 
-onBeforeMount(async () => await loadMangas(page.value))
+onBeforeMount(async () => {
+  if (history.state?.message) {
+    showAlert(history.state.message, AlertType.Success)
+  }
+  await loadMangas(page.value)
+})
 
 const hasNextPage = computed(() => page.value < meta.value.pagination.pageCount)
 
@@ -73,54 +80,67 @@ async function deleteAndClose() {
 </script>
 
 <template>
-  <Alert v-if="alertMessage" :message="alertMessage" :type="alertType"></Alert>
-  <LoadingSpinner v-if="loading" label="Carregando mangás…" />
-  <template v-else>
-    <table class="col-12 table table-striped" aria-label="Todos os mangás disponíveis">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Título</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tfoot>
-        <tr>
-          <td colspan="3" class="text-center">
-            <LoadingSpinner v-if="loadingMore" label="Carregando mangás…" />
-            <button v-else-if="hasNextPage" class="btn btn-secondary" @click="goToNextPage">
-              Ver mais
-            </button>
-            <span v-else>Não há mais mangás</span>
-          </td>
-        </tr>
-      </tfoot>
-      <tbody>
-        <tr v-for="manga in mangas" :key="manga.id">
-          <td>{{ manga.number }}</td>
-          <td><img :src="useUpload(manga.cover.url)" class="img-thumbnail" /> {{ manga.title }}</td>
-          <td>
-            <button class="btn btn-sm btn-warning mx-1" title="Editar manga">
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-danger btn-sm" title="Remover manga" @click="openModal(manga)">
-              <i class="bi bi-trash"></i>
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <Modal
-      title="Confirmação"
-      :visible="showModal"
-      :content="`Você realmente deseja deletar o Mangá  ${selectedManga?.title}`"
-      confirm-label="Deletar"
-      cancel-label="Cancelar"
-      :confirming="deleting"
-      @close="closeModal"
-      @confirm="deleteAndClose"
-    />
-  </template>
+  <div class="row">
+    <Alert v-if="alertMessage" :message="alertMessage" :type="alertType"></Alert>
+    <button class="btn btn-success col-md-2 mb-3" @click="router.push({ name: 'manga-new' })">
+      <i class="bi bi-plus"></i>Adicionar
+    </button>
+
+    <LoadingSpinner v-if="loading" label="Carregando mangás…" />
+    <template v-else>
+      <table class="col-12 table table-striped" aria-label="Todos os mangás disponíveis">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Título</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tfoot>
+          <tr>
+            <td colspan="3" class="text-center">
+              <LoadingSpinner v-if="loadingMore" label="Carregando mangás…" />
+              <button v-else-if="hasNextPage" class="btn btn-secondary" @click="goToNextPage">
+                Ver mais
+              </button>
+              <span v-else>Não há mais mangás</span>
+            </td>
+          </tr>
+        </tfoot>
+        <tbody>
+          <tr v-for="manga in mangas" :key="manga.id">
+            <td>{{ manga.number }}</td>
+            <td>
+              <img :src="useUpload(manga.cover.url)" class="img-thumbnail" /> {{ manga.title }}
+            </td>
+            <td>
+              <button
+                class="btn btn-sm btn-warning mx-1"
+                title="Editar manga"
+                @click="router.push({ name: 'manga-edit', params: { id: `${manga.id}` } })"
+              >
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-danger btn-sm" title="Remover manga" @click="openModal(manga)">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </template>
+  </div>
+
+  <Modal
+    title="Confirmação"
+    :visible="showModal"
+    :content="`Você realmente deseja deletar o Mangá  ${selectedManga?.title}`"
+    confirm-label="Deletar"
+    cancel-label="Cancelar"
+    :confirming="deleting"
+    @close="closeModal"
+    @confirm="deleteAndClose"
+  />
 </template>
 
 <style scoped>
