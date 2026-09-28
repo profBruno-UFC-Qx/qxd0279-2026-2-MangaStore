@@ -15,27 +15,30 @@ const routes = [
     component: Home,
   },
   {
-    path: '/manga/new',
-    name: 'manga-new',
-    component: MangaForm,
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/manga/edit/:id',
-    name: 'manga-edit',
-    component: MangaForm,
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/manga/:id',
     name: 'manga-detail',
     component: MangaDetail,
   },
   {
     path: '/admin',
-    name: 'admin',
-    component: HomeAdmin,
     meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'admin',
+        component: HomeAdmin,
+      },
+      {
+        path: 'manga/new',
+        name: 'manga-new',
+        component: MangaForm,
+      },
+      {
+        path: 'manga/:id/edit',
+        name: 'manga-edit',
+        component: MangaForm,
+      },
+    ],
   },
   {
     path: '/login',

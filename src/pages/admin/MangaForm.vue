@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, onBeforeMount, onBeforeUnmount } from 'vue'
 import { useUpload } from '@/api'
-import { ApiError } from '@/api/ApiError'
 import { useRoute, useRouter } from 'vue-router'
 import { MangaService, type MangaInput } from '@/api/MangaService'
 import { useAlert } from '@/composables/useAlert'
+import { useManga } from '@/composables/useManga'
 import Alert from '@/components/Alert.vue'
 
-const { alertMessage, alertType, showError } = useAlert()
+const { alertMessage, alertType, showAlert, showError } = useAlert()
+const { manga, loading, error: loadError, loadManga } = useManga()
 const router = useRouter()
 const route = useRoute()
 const form = ref<MangaInput>({ title: '', summary: '', number: 0, price: 0 })
 const cover = ref<File>()
-const coverUrl = ref('')
-const loading = ref(false)
+const coverUrl = computed(() => manga.value?.cover.url ?? '')
 const saving = ref(false)
 
 const mangaId = computed(() => route.params.id as string | undefined)
@@ -28,28 +28,17 @@ const buttonLabelInAction = computed(() =>
 
 onBeforeMount(async () => {
   if (mangaId.value) {
-    await loadManga(mangaId.value)
+    const data = await loadManga(mangaId.value)
+    if (data) {
+      const { title, summary, number, price } = data
+      form.value = { title, summary, number, price }
+    } else if (loadError.value) {
+      showAlert(loadError.value)
+    }
   }
 })
 
 onBeforeUnmount(() => URL.revokeObjectURL(coverPreview.value))
-
-async function loadManga(id: string) {
-  loading.value = true
-  try {
-    const { data } = await MangaService.findById(id)
-    const { title, summary, number, price } = data
-    form.value = { title, summary, number, price }
-    coverUrl.value = data.cover.url
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 404) {
-      return router.replace({ name: 'not-found' })
-    }
-    showError(e)
-  } finally {
-    loading.value = false
-  }
-}
 
 function handleFileUpload(event: Event) {
   const target = event.target as HTMLInputElement
@@ -60,23 +49,23 @@ function handleFileUpload(event: Event) {
 }
 
 async function submit() {
-  if (!canSubmit.value) return
-
-  saving.value = true
-  try {
-    if (mangaId.value) {
-      await MangaService.update(mangaId.value, form.value, cover.value)
-    } else {
-      await MangaService.create(form.value, cover.value!)
+  if (canSubmit.value) {
+    saving.value = true
+    try {
+      if (mangaId.value) {
+        await MangaService.update(mangaId.value, form.value, cover.value)
+      } else {
+        await MangaService.create(form.value, cover.value!)
+      }
+      const message = isEditing.value
+        ? 'Manga atualizado com sucesso'
+        : 'Manga adicionado com sucesso'
+      await router.push({ name: 'admin', state: { message } })
+    } catch (e) {
+      showError(e)
+    } finally {
+      saving.value = false
     }
-    const message = isEditing.value
-      ? 'Manga atualizado com sucesso'
-      : 'Manga adicionado com sucesso'
-    await router.push({ name: 'admin', state: { message } })
-  } catch (e) {
-    showError(e)
-  } finally {
-    saving.value = false
   }
 }
 </script>

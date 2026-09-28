@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onBeforeMount, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import { AlertType, type Manga } from '@/types'
 import { MangaService, type MetaInformation } from '@/api/MangaService'
 import { useAlert } from '@/composables/useAlert'
@@ -9,7 +9,6 @@ import Alert from '@/components/Alert.vue'
 import { useUpload } from '@/api'
 import Modal from '@/components/Modal.vue'
 
-const router = useRouter()
 const mangas = ref<Manga[]>([])
 const loading = ref(true)
 const loadingMore = ref(false)
@@ -82,9 +81,9 @@ async function deleteAndClose() {
 <template>
   <div class="row">
     <Alert v-if="alertMessage" :message="alertMessage" :type="alertType"></Alert>
-    <button class="btn btn-success col-md-2 mb-3" @click="router.push({ name: 'manga-new' })">
+    <RouterLink :to="{ name: 'manga-new' }" class="btn btn-success col-md-2 mb-3">
       <i class="bi bi-plus"></i>Adicionar
-    </button>
+    </RouterLink>
 
     <LoadingSpinner v-if="loading" label="Carregando mangás…" />
     <template v-else>
@@ -114,13 +113,13 @@ async function deleteAndClose() {
               <img :src="useUpload(manga.cover.url)" class="img-thumbnail" /> {{ manga.title }}
             </td>
             <td>
-              <button
+              <RouterLink
+                :to="{ name: 'manga-edit', params: { id: manga.id } }"
                 class="btn btn-sm btn-warning mx-1"
                 title="Editar manga"
-                @click="router.push({ name: 'manga-edit', params: { id: `${manga.id}` } })"
               >
                 <i class="bi bi-pencil"></i>
-              </button>
+              </RouterLink>
               <button class="btn btn-danger btn-sm" title="Remover manga" @click="openModal(manga)">
                 <i class="bi bi-trash"></i>
               </button>
