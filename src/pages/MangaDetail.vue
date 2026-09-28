@@ -1,18 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onBeforeMount } from 'vue'
+import { computed, onBeforeMount } from 'vue'
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { useUpload } from '@/api'
-import type { Manga } from '@/types'
-import { MangaService } from '@/api/MangaService'
-import { ApiError } from '@/api/ApiError'
+import { useManga } from '@/composables/useManga'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Alert from '@/components/Alert.vue'
 
 const route = useRoute()
 const router = useRouter()
-const loading = ref(true)
-const error = ref<string | null>(null)
-const manga = ref<Manga | null>(null)
+const { manga, loading, error, loadManga } = useManga()
 
 onBeforeMount(async () => loadManga(route.params.id as string))
 
@@ -21,20 +17,6 @@ onBeforeRouteUpdate(async (to, from) => {
     loadManga(to.params.id as string)
   }
 })
-
-async function loadManga(id: string) {
-  try {
-    const result = await MangaService.findById(id)
-    manga.value = result.data
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 404) {
-      await router.replace({ name: 'not-found' })
-    }
-    error.value = (e as Error).message
-  } finally {
-    loading.value = false
-  }
-}
 
 const coverUrl = computed(() => (manga.value ? useUpload(manga.value.cover.url) : ''))
 const hasPrevious = computed(() => (manga.value ? manga.value.number <= 1 : false))
@@ -70,7 +52,10 @@ const hasPrevious = computed(() => (manga.value ? manga.value.number <= 1 : fals
           >
             Anterior
           </button>
-          <button class="btn btn-outline-secondary" @click="router.push({ name: 'manga-detail', params: { id: manga.id + 1 } })">
+          <button
+            class="btn btn-outline-secondary"
+            @click="router.push({ name: 'manga-detail', params: { id: manga.id + 1 } })"
+          >
             Próximo
           </button>
         </nav>

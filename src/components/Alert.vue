@@ -1,9 +1,13 @@
 <script setup lang="ts">
-const props = defineProps<{ message: string }>()
+import { AlertType } from '@/types'
+
+const props = withDefaults(defineProps<{ message: string; type?: AlertType }>(), {
+  type: AlertType.Danger,
+})
 </script>
 
 <template>
-  <div class="alert alert-danger" role="alert">
+  <div class="alert" role="alert" :class="`alert-${props.type}`">
     {{ props.message }}
   </div>
 </template>

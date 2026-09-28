@@ -19,3 +19,9 @@ export type User = {
   email: string
   role?: Role
 }
+
+export enum AlertType {
+  Danger = 'danger',
+  Warning = 'warning',
+  Success = 'success',
+}

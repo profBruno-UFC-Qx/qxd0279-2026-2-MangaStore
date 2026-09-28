@@ -6,6 +6,7 @@ import Login from '@/pages/Login.vue'
 import Register from '@/pages/Register.vue'
 import NotFound from '@/pages/NotFound.vue'
 import HomeAdmin from '@/pages/admin/HomeAdmin.vue'
+import MangaForm from '@/pages/admin/MangaForm.vue'
 
 const routes = [
   {
@@ -20,9 +21,24 @@ const routes = [
   },
   {
     path: '/admin',
-    name: 'admin',
-    component: HomeAdmin,
     meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'admin',
+        component: HomeAdmin,
+      },
+      {
+        path: 'manga/new',
+        name: 'manga-new',
+        component: MangaForm,
+      },
+      {
+        path: 'manga/:id/edit',
+        name: 'manga-edit',
+        component: MangaForm,
+      },
+    ],
   },
   {
     path: '/login',
