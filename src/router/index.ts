@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import MainLayout from '@/layouts/MainLayout.vue'
 import Home from '@/pages/Home.vue'
 import MangaDetail from '@/pages/MangaDetail.vue'
 import Login from '@/pages/Login.vue'
@@ -11,51 +12,57 @@ import MangaForm from '@/pages/admin/MangaForm.vue'
 const routes = [
   {
     path: '/',
-    name: 'home',
-    component: Home,
-  },
-  {
-    path: '/manga/:id',
-    name: 'manga-detail',
-    component: MangaDetail,
-  },
-  {
-    path: '/admin',
-    meta: { requiresAuth: true },
+    component: MainLayout,
     children: [
       {
         path: '',
-        name: 'admin',
-        component: HomeAdmin,
+        name: 'home',
+        component: Home,
       },
       {
-        path: 'manga/new',
-        name: 'manga-new',
-        component: MangaForm,
+        path: 'manga/:id',
+        name: 'manga-detail',
+        component: MangaDetail,
       },
       {
-        path: 'manga/:id/edit',
-        name: 'manga-edit',
-        component: MangaForm,
+        path: 'admin',
+        meta: { requiresAuth: true },
+        children: [
+          {
+            path: '',
+            name: 'admin',
+            component: HomeAdmin,
+          },
+          {
+            path: 'manga/new',
+            name: 'manga-new',
+            component: MangaForm,
+          },
+          {
+            path: 'manga/:id/edit',
+            name: 'manga-edit',
+            component: MangaForm,
+          },
+        ],
       },
+      {
+        path: 'login',
+        name: 'login',
+        component: Login,
+      },
+      {
+        path: 'register',
+        name: 'register',
+        component: Register,
+      },
+      {
+        path: 'notFound',
+        name: 'not-found',
+        component: NotFound,
+      },
+      { path: ':pathMatch(.*)*', name: 'catch-all', component: NotFound },
     ],
   },
-  {
-    path: '/login',
-    name: 'login',
-    component: Login,
-  },
-  {
-    path: '/register',
-    name: 'register',
-    component: Register,
-  },
-  {
-    path: '/notFound',
-    name: 'not-found',
-    component: NotFound,
-  },
-  { path: '/:pathMatch(.*)*', name: 'catch-all', component: NotFound },
 ]
 
 export const router = createRouter({
