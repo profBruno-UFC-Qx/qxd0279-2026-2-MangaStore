@@ -24,7 +24,7 @@ const hasPrevious = computed(() => (manga.value ? manga.value.number <= 1 : fals
 
 <template>
   <LoadingSpinner v-if="loading" label="Carregando detalhes do mangá…" />
-  <Alert v-else-if="error" :message="error"></Alert>
+  <Alert v-else-if="error" :message="error" @dismiss="error = null" />
   <div v-else-if="manga" class="card shadow-sm mb-3">
     <div class="row g-0">
       <div class="col-md-4">

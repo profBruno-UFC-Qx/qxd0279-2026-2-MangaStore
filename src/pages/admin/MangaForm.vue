@@ -2,12 +2,13 @@
 import { ref, computed, onBeforeMount, onBeforeUnmount } from 'vue'
 import { useUpload } from '@/api'
 import { useRoute, useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
 import { MangaService, type MangaInput } from '@/api/MangaService'
-import { useAlert } from '@/composables/useAlert'
 import { useManga } from '@/composables/useManga'
 import Alert from '@/components/Alert.vue'
 
-const { alertMessage, alertType, showAlert, showError } = useAlert()
+const $q = useQuasar()
+const saveError = ref<string | null>(null)
 const { manga, loading, error: loadError, loadManga } = useManga()
 const router = useRouter()
 const route = useRoute()
@@ -22,6 +23,11 @@ const canSubmit = computed(() => isEditing.value || !!cover.value)
 const coverPreview = ref('')
 const formTitle = computed(() => (isEditing.value ? 'Editar Manga' : 'Adicionar Manga'))
 const buttonLabel = computed(() => (isEditing.value ? 'Editar Manga' : 'Criar Manga'))
+const errorMessage = computed(() => loadError.value ?? saveError.value)
+function dismissError() {
+  loadError.value = null
+  saveError.value = null
+}
 const buttonLabelInAction = computed(() =>
   isEditing.value ? 'Editando o Manga' : 'Criando o Manga',
 )
@@ -32,8 +38,6 @@ onBeforeMount(async () => {
     if (data) {
       const { title, summary, number, price } = data
       form.value = { title, summary, number, price }
-    } else if (loadError.value) {
-      showAlert(loadError.value)
     }
   }
 })
@@ -51,6 +55,7 @@ function handleFileUpload(event: Event) {
 async function submit() {
   if (canSubmit.value) {
     saving.value = true
+    saveError.value = null
     try {
       if (mangaId.value) {
         await MangaService.update(mangaId.value, form.value, cover.value)
@@ -60,9 +65,10 @@ async function submit() {
       const message = isEditing.value
         ? 'Manga atualizado com sucesso'
         : 'Manga adicionado com sucesso'
-      await router.push({ name: 'admin', state: { message } })
+      $q.notify({ type: 'positive', message })
+      await router.push({ name: 'admin' })
     } catch (e) {
-      showError(e)
+      saveError.value = (e as Error).message
     } finally {
       saving.value = false
     }
@@ -74,7 +80,7 @@ async function submit() {
   <div class="row justify-content-center">
     <div class="col-md-6 col-lg-8">
       <h1 class="h3 mb-3">{{ formTitle }}</h1>
-      <Alert v-if="alertMessage" :message="alertMessage" :type="alertType" class="mb-3"></Alert>
+      <Alert v-if="errorMessage" :message="errorMessage" class="q-mb-md" @dismiss="dismissError" />
       <form @submit.prevent="submit">
         <fieldset :disabled="loading || saving">
           <div class="mb-3" v-if="coverPreview || coverUrl">

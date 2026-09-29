@@ -1,23 +1,20 @@
 <script setup lang="ts">
 import { ref, onBeforeMount, computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { AlertType, type Manga } from '@/types'
+import { useQuasar } from 'quasar'
+import type { Manga } from '@/types'
 import { MangaService, type MetaInformation } from '@/api/MangaService'
-import { useAlert } from '@/composables/useAlert'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Alert from '@/components/Alert.vue'
 import { useUpload } from '@/api'
-import Modal from '@/components/Modal.vue'
 
+const $q = useQuasar()
 const mangas = ref<Manga[]>([])
 const loading = ref(true)
 const loadingMore = ref(false)
-const { alertMessage, alertType, showAlert, showError } = useAlert()
+const error = ref<string | null>(null)
 const meta = ref<MetaInformation | null>(null)
 const page = ref<number>(1)
-const selectedManga = ref<Manga | null>(null)
-const showModal = computed(() => selectedManga.value != null)
-const deleting = ref(false)
 
 async function loadMangas(page: number) {
   try {
@@ -25,31 +22,26 @@ async function loadMangas(page: number) {
     mangas.value = mangas.value.concat(result.data)
     meta.value = result.meta
   } catch (e) {
-    showError(e)
+    error.value = (e as Error).message
   } finally {
     loading.value = false
   }
 }
 
 async function deleteManga(id: number) {
+  $q.loading.show({ message: 'Deletando…' })
   try {
-    deleting.value = true
     await MangaService.deleteById(id)
     mangas.value = mangas.value.filter((m) => m.id != id)
-    showAlert('Manga deletado com sucesso', AlertType.Success)
+    $q.notify({ type: 'positive', message: 'Manga deletado com sucesso', position: 'top-right' })
   } catch (e) {
-    showError(e)
+    $q.notify({ type: 'negative', message: (e as Error).message, position: 'top-right' })
   } finally {
-    deleting.value = false
+    $q.loading.hide()
   }
 }
 
-onBeforeMount(async () => {
-  if (history.state?.message) {
-    showAlert(history.state.message, AlertType.Success)
-  }
-  await loadMangas(page.value)
-})
+onBeforeMount(async () => await loadMangas(page.value))
 
 const hasNextPage = computed(() => page.value < (meta.value?.pagination.pageCount ?? 0))
 
@@ -62,25 +54,20 @@ async function goToNextPage() {
   }
 }
 
-function openModal(manga: Manga) {
-  selectedManga.value = manga
-}
-
-function closeModal() {
-  selectedManga.value = null
-}
-
-async function deleteAndClose() {
-  if (selectedManga.value) {
-    await deleteManga(selectedManga.value?.id)
-  }
-  closeModal()
+function confirmDelete(manga: Manga) {
+  $q.dialog({
+    title: 'Confirmação',
+    message: `Você realmente deseja deletar o Mangá ${manga.title}?`,
+    cancel: { label: 'Cancelar', flat: true },
+    ok: { label: 'Deletar', color: 'negative' },
+    persistent: true,
+  }).onOk(() => deleteManga(manga.id))
 }
 </script>
 
 <template>
   <div class="row">
-    <Alert v-if="alertMessage" :message="alertMessage" :type="alertType"></Alert>
+    <Alert v-if="error" :message="error" class="col-12 q-mb-md" @dismiss="error = null" />
     <RouterLink :to="{ name: 'manga-new' }" class="btn btn-success col-md-2 mb-3">
       <i class="bi bi-plus"></i>Adicionar
     </RouterLink>
@@ -120,7 +107,11 @@ async function deleteAndClose() {
               >
                 <i class="bi bi-pencil"></i>
               </RouterLink>
-              <button class="btn btn-danger btn-sm" title="Remover manga" @click="openModal(manga)">
+              <button
+                class="btn btn-danger btn-sm"
+                title="Remover manga"
+                @click="confirmDelete(manga)"
+              >
                 <i class="bi bi-trash"></i>
               </button>
             </td>
@@ -129,17 +120,6 @@ async function deleteAndClose() {
       </table>
     </template>
   </div>
-
-  <Modal
-    title="Confirmação"
-    :visible="showModal"
-    :content="`Você realmente deseja deletar o Mangá  ${selectedManga?.title}`"
-    confirm-label="Deletar"
-    cancel-label="Cancelar"
-    :confirming="deleting"
-    @close="closeModal"
-    @confirm="deleteAndClose"
-  />
 </template>
 
 <style scoped>

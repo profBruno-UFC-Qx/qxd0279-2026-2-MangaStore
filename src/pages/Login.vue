@@ -43,7 +43,7 @@ async function submit() {
   <div class="row justify-content-center">
     <div class="col-md-6 col-lg-4">
       <h1 class="h3 mb-3">Entrar</h1>
-      <Alert v-if="error" :message="error" class="mb-3" />
+      <Alert v-if="error" :message="error" class="mb-3" @dismiss="error = ''" />
       <form @submit.prevent="submit">
         <div class="mb-3">
           <label for="identifier" class="form-label">E-mail ou usuário</label>

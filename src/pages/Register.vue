@@ -17,7 +17,7 @@ function submit() {}
   <div class="row justify-content-center">
     <div class="col-md-6 col-lg-4">
       <h1 class="h3 mb-3">Criar conta</h1>
-      <Alert v-if="error" :message="error" class="mb-3" />
+      <Alert v-if="error" :message="error" class="mb-3" @dismiss="error = ''" />
       <form @submit.prevent="submit">
         <div class="mb-3">
           <label for="username" class="form-label">Usuário</label>
@@ -70,7 +70,9 @@ function submit() {}
           {{ loading ? 'Criando conta…' : 'Criar conta' }}
         </button>
       </form>
-      <p class="mt-3 text-center">Já tem conta? <router-link :to="{ name: 'login' }">Entrar</router-link></p>
+      <p class="mt-3 text-center">
+        Já tem conta? <router-link :to="{ name: 'login' }">Entrar</router-link>
+      </p>
     </div>
   </div>
 </template>
