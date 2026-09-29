@@ -9,26 +9,43 @@ const coverUrl = computed(() => useUpload(props.cover.url))
 </script>
 
 <template>
-  <div class="col">
-    <RouterLink
-      :to="{ name: 'manga-detail', params: { id: props.id } }"
-      class="card shadow-sm text-decoration-none"
-    >
-      <img :src="coverUrl" :alt="'Capa do manga' + props.title" :title="props.title" />
-      <div class="card-body">
-        <p class="card-title">
-          {{ props.title }}
-        </p>
-        <p class="card-text fw-bold">
-          Preço: <span class="text-danger">{{ props.price }}</span>
-        </p>
-      </div>
-    </RouterLink>
-  </div>
+  <RouterLink :to="{ name: 'manga-detail', params: { id: props.id } }" class="card-link">
+    <q-card>
+      <q-img
+        :src="coverUrl"
+        :alt="`Capa do manga ${props.title}`"
+        :title="props.title"
+        :ratio="2 / 3"
+      >
+        <div class="absolute-bottom caption">
+          <div class="text-subtitle2 ellipsis-2-lines">{{ props.title }}</div>
+          <div class="text-weight-bold text-yellow-6">{{ props.price }}</div>
+        </div>
+      </q-img>
+    </q-card>
+  </RouterLink>
 </template>
 
 <style scoped>
-img:hover {
-  filter: grayscale(90%);
+.card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.caption {
+  padding: 8px 12px;
+  transition: opacity 0.2s ease;
+}
+
+@media (hover: hover) and (min-width: 600px) {
+  .caption {
+    opacity: 0;
+  }
+
+  .card-link:hover .caption,
+  .card-link:focus-visible .caption {
+    opacity: 1;
+  }
 }
 </style>

@@ -54,17 +54,17 @@ onBeforeRouteUpdate(async (to, from) => {
         boundary-links
       />
     </div>
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
-      <MangaCard
-        v-for="manga of mangas"
-        :key="manga.id"
-        :id="manga.id"
-        :cover="manga.cover"
-        :title="manga.title"
-        :summary="manga.summary"
-        :price="manga.price"
-        :number="manga.number"
-      />
+    <div class="shelf">
+      <div v-for="manga of mangas" :key="manga.id" class="shelf-item">
+        <MangaCard
+          :id="manga.id"
+          :cover="manga.cover"
+          :title="manga.title"
+          :summary="manga.summary"
+          :price="manga.price"
+          :number="manga.number"
+        />
+      </div>
     </div>
     <div class="flex flex-center q-mt-md">
       <q-pagination
@@ -78,3 +78,42 @@ onBeforeRouteUpdate(async (to, from) => {
     </div>
   </template>
 </template>
+
+<style scoped>
+.shelf {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.shelf-item {
+  position: relative;
+  width: calc(50% - 8px);
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+}
+
+@media (hover: hover) and (min-width: 600px) {
+  .shelf {
+    gap: 32px 0;
+    padding: 12px 110px 0 0;
+  }
+
+  .shelf-item {
+    width: max(180px, 20%);
+    margin-right: -110px;
+  }
+
+  .shelf-item:hover,
+  .shelf-item:focus-within {
+    z-index: 1;
+    transform: translateY(-12px) scale(1.05);
+  }
+
+  .shelf:hover .shelf-item:not(:hover) {
+    filter: grayscale(90%);
+  }
+}
+</style>
