@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { ref, onBeforeMount, computed } from 'vue'
-import { RouterLink } from 'vue-router'
-import { useQuasar } from 'quasar'
+import { useQuasar, type QTableColumn } from 'quasar'
 import type { Manga } from '@/types'
 import { MangaService, type MetaInformation } from '@/api/MangaService'
-import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Alert from '@/components/Alert.vue'
 import { useUpload } from '@/api'
 
@@ -15,6 +13,22 @@ const loadingMore = ref(false)
 const error = ref<string | null>(null)
 const meta = ref<MetaInformation | null>(null)
 const page = ref<number>(1)
+
+const columns: QTableColumn<Manga>[] = [
+  { name: 'cover', label: 'Capa', field: (row) => row.cover.url, align: 'left' },
+  { name: 'title', label: 'Título', field: 'title', align: 'left', sortable: true },
+  { name: 'number', label: 'Volume', field: 'number', align: 'center', sortable: true },
+  {
+    name: 'price',
+    label: 'Preço',
+    field: 'price',
+    align: 'right',
+    sortable: true,
+    format: (price: number) =>
+      price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+  },
+  { name: 'actions', label: 'Ações', field: 'id', align: 'right' },
+]
 
 async function loadMangas(page: number) {
   try {
@@ -66,73 +80,90 @@ function confirmDelete(manga: Manga) {
 </script>
 
 <template>
-  <div class="row">
-    <Alert v-if="error" :message="error" class="col-12 q-mb-md" @dismiss="error = null" />
-    <RouterLink :to="{ name: 'manga-new' }" class="btn btn-success col-md-2 mb-3">
-      <i class="bi bi-plus"></i>Adicionar
-    </RouterLink>
+  <div class="row items-center justify-between q-mb-md">
+    <h1 class="text-h5 q-my-none">Mangás</h1>
+    <q-btn color="positive" icon="add" label="Adicionar" :to="{ name: 'manga-new' }" />
+  </div>
 
-    <LoadingSpinner v-if="loading" label="Carregando mangás…" />
-    <template v-else>
-      <table class="col-12 table table-striped" aria-label="Todos os mangás disponíveis">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Título</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tfoot>
-          <tr>
-            <td colspan="3" class="text-center">
-              <LoadingSpinner v-if="loadingMore" label="Carregando mangás…" />
-              <button v-else-if="hasNextPage" class="btn btn-secondary" @click="goToNextPage">
-                Ver mais
-              </button>
-              <span v-else>Não há mais mangás</span>
-            </td>
-          </tr>
-        </tfoot>
-        <tbody>
-          <tr v-for="manga in mangas" :key="manga.id">
-            <td>{{ manga.number }}</td>
-            <td>
-              <img :src="useUpload(manga.cover.url)" class="img-thumbnail" /> {{ manga.title }}
-            </td>
-            <td>
-              <RouterLink
-                :to="{ name: 'manga-edit', params: { id: manga.id } }"
-                class="btn btn-sm btn-warning mx-1"
-                title="Editar manga"
-              >
-                <i class="bi bi-pencil"></i>
-              </RouterLink>
-              <button
-                class="btn btn-danger btn-sm"
-                title="Remover manga"
-                @click="confirmDelete(manga)"
-              >
-                <i class="bi bi-trash"></i>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+  <Alert v-if="error" :message="error" class="q-mb-md" @dismiss="error = null" />
+
+  <q-table
+    flat
+    bordered
+    row-key="id"
+    :rows="mangas"
+    :columns="columns"
+    :loading="loading"
+    :pagination="{ rowsPerPage: 0 }"
+    hide-pagination
+    no-data-label="Nenhum mangá cadastrado"
+    loading-label="Carregando mangás…"
+    aria-label="Todos os mangás disponíveis"
+  >
+    <template #body-cell-cover="props">
+      <q-td :props="props">
+        <div class="thumbnail">
+          <q-img
+            :src="useUpload(props.row.cover.url)"
+            :alt="`Capa do manga ${props.row.title}`"
+            :ratio="2 / 3"
+            class="rounded-borders"
+          />
+          <q-tooltip class="bg-transparent q-pa-none" anchor="center right" self="center left">
+            <q-img
+              :src="useUpload(props.row.cover.url)"
+              :ratio="2 / 3"
+              width="200px"
+              class="rounded-borders shadow-10"
+            />
+          </q-tooltip>
+        </div>
+      </q-td>
     </template>
+
+    <template #body-cell-actions="props">
+      <q-td :props="props">
+        <q-btn
+          flat
+          round
+          dense
+          color="warning"
+          icon="edit"
+          aria-label="Editar manga"
+          :to="{ name: 'manga-edit', params: { id: props.row.id } }"
+        >
+          <q-tooltip>Editar</q-tooltip>
+        </q-btn>
+        <q-btn
+          flat
+          round
+          dense
+          color="negative"
+          icon="delete"
+          aria-label="Remover manga"
+          @click="confirmDelete(props.row)"
+        >
+          <q-tooltip>Remover</q-tooltip>
+        </q-btn>
+      </q-td>
+    </template>
+  </q-table>
+
+  <div v-if="!loading" class="flex flex-center q-mt-md">
+    <q-btn
+      v-if="hasNextPage"
+      outline
+      color="secondary"
+      label="Ver mais"
+      :loading="loadingMore"
+      @click="goToNextPage"
+    />
+    <span v-else class="text-grey">Não há mais mangás</span>
   </div>
 </template>
 
 <style scoped>
-.img-thumbnail {
-  max-height: 10vh;
-  transition: max-height 0.15s ease-out;
-  overflow: hidden;
-}
-
-.img-thumbnail:hover {
-  position: relative;
-  max-height: 40vh;
-  transition: max-height 0.25s ease-in;
-  transform: translate(-25%, 0%);
+.thumbnail {
+  width: 48px;
 }
 </style>
