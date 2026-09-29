@@ -1,0 +1,27 @@
+.body--dark .text-primary {
+  color: #6ea8fe !important;
+}
+
+.body--dark .text-secondary {
+  color: #adb5bd !important;
+}
+
+.body--dark .text-accent {
+  color: #a98eda !important;
+}
+
+.body--dark .text-positive {
+  color: #75b798 !important;
+}
+
+.body--dark .text-negative {
+  color: #ea868f !important;
+}
+
+.body--dark .text-info {
+  color: #6edff6 !important;
+}
+
+.body--dark .text-warning {
+  color: #ffda6a !important;
+}

@@ -21,7 +21,7 @@ export type User = {
 }
 
 export enum AlertType {
-  Danger = 'danger',
+  Danger = 'negative',
   Warning = 'warning',
-  Success = 'success',
+  Success = 'positive',
 }

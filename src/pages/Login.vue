@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import Alert from '@/components/Alert.vue'
+import { required } from '@/utils/validation'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,6 +12,7 @@ const identifier = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
+const showPassword = ref(false)
 
 function destination(): RouteLocationRaw {
   const redirect = route.query.redirect
@@ -40,40 +42,75 @@ async function submit() {
 </script>
 
 <template>
-  <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
-      <h1 class="h3 mb-3">Entrar</h1>
-      <Alert v-if="error" :message="error" class="mb-3" />
-      <form @submit.prevent="submit">
-        <div class="mb-3">
-          <label for="identifier" class="form-label">E-mail ou usuário</label>
-          <input
-            id="identifier"
+  <div class="row justify-center q-py-lg">
+    <q-card flat bordered class="auth-card">
+      <q-card-section class="text-center">
+        <q-icon name="lock" size="2.5em" color="primary" />
+        <h1 class="text-h5 q-mt-sm q-mb-none">Entrar</h1>
+      </q-card-section>
+
+      <q-card-section>
+        <Alert v-if="error" :message="error" class="q-mb-md" @dismiss="error = ''" />
+        <q-form @submit="submit">
+          <q-input
             v-model="identifier"
-            type="text"
-            class="form-control"
+            outlined
+            label="E-mail ou usuário"
             autocomplete="username"
-            required
-          />
-        </div>
-        <div class="mb-3">
-          <label for="password" class="form-label">Senha</label>
-          <input
-            id="password"
+            :rules="[required]"
+            :disable="loading"
+          >
+            <template #prepend><q-icon name="person" /></template>
+          </q-input>
+          <q-input
             v-model="password"
-            type="password"
-            class="form-control"
+            outlined
+            :type="showPassword ? 'text' : 'password'"
+            label="Senha"
             autocomplete="current-password"
-            required
-          />
-        </div>
-        <button type="submit" class="btn btn-primary w-100" :disabled="loading">
-          {{ loading ? 'Entrando…' : 'Entrar' }}
-        </button>
-      </form>
-      <p class="mt-3 text-center">
-        Não tem conta? <router-link :to="{ name: 'register' }">Cadastre-se</router-link>
-      </p>
-    </div>
+            :rules="[required]"
+            :disable="loading"
+          >
+            <template #prepend><q-icon name="key" /></template>
+            <template #append>
+              <q-btn
+                flat
+                round
+                dense
+                :icon="showPassword ? 'visibility_off' : 'visibility'"
+                :aria-label="showPassword ? 'Ocultar senha' : 'Mostrar senha'"
+                @click="showPassword = !showPassword"
+              />
+            </template>
+          </q-input>
+          <q-btn
+            type="submit"
+            color="primary"
+            label="Entrar"
+            class="full-width q-mt-sm"
+            :loading="loading"
+          >
+            <template #loading>
+              <q-spinner class="on-left" />
+              Entrando…
+            </template>
+          </q-btn>
+        </q-form>
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section class="text-center">
+        Não tem conta?
+        <q-btn flat dense no-caps color="primary" label="Cadastre-se" :to="{ name: 'register' }" />
+      </q-card-section>
+    </q-card>
   </div>
 </template>
+
+<style scoped>
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+}
+</style>

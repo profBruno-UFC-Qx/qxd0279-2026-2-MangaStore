@@ -3,9 +3,7 @@ defineProps<{ label?: string }>()
 </script>
 
 <template>
-  <div class="d-flex justify-content-center py-5">
-    <div class="spinner-grow text-secondary" role="status">
-      <span class="visually-hidden">{{ label ?? 'Carregando…' }}</span>
-    </div>
+  <div class="flex flex-center q-py-xl" role="status" :aria-label="label ?? 'Carregando…'">
+    <q-spinner-ball size="3em" color="grey" />
   </div>
 </template>

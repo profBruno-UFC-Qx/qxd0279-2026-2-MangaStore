@@ -23,7 +23,7 @@ function toFormData(data: MangaInput, cover?: File) {
 export const MangaService = {
   findAll: (page: number | string = 1) =>
     request<StrapiResponse<Manga[]>>(
-      `/mangas?populate=cover&pagination[page]=${page}&pagination[pageSize]=24`,
+      `/mangas?populate=cover&pagination[page]=${page}&pagination[pageSize]=20`,
     ),
 
   findById: (id: number | string) => request<StrapiResponse<Manga>>(`/mangas/${id}?populate=cover`),
