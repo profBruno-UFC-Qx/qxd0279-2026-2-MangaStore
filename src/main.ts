@@ -4,6 +4,7 @@ import { Quasar, Notify, Dialog, Loading } from 'quasar'
 import langPtBR from 'quasar/lang/pt-BR'
 import '@quasar/extras/material-icons/material-icons.css'
 import 'quasar/src/css/index.sass'
+import './css/app.css'
 import { router } from './router'
 import App from './App.vue'
 

@@ -124,10 +124,11 @@ function confirmDelete(manga: Manga) {
     <template #body-cell-actions="props">
       <q-td :props="props">
         <q-btn
-          flat
+          unelevated
           round
           dense
           color="warning"
+          text-color="dark"
           icon="edit"
           aria-label="Editar manga"
           :to="{ name: 'manga-edit', params: { id: props.row.id } }"

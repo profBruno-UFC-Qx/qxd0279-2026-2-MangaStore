@@ -14,6 +14,7 @@ const icons: Record<AlertType, string> = {
   [AlertType.Success]: 'check_circle',
 }
 const icon = computed(() => icons[props.type])
+const ink = computed(() => (props.type === AlertType.Warning ? 'text-dark' : 'text-white'))
 </script>
 
 <template>
@@ -21,7 +22,7 @@ const icon = computed(() => icons[props.type])
     rounded
     role="alert"
     class="relative-position q-pr-xl"
-    :class="`bg-${props.type} text-white`"
+    :class="[`bg-${props.type}`, ink]"
   >
     <template #avatar>
       <q-icon :name="icon" />
