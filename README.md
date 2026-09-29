@@ -1,11 +1,13 @@
-# MangaStore — uma vitrine Vue 3 que amadurece do `fetch` na página à camada de serviço, à autenticação, ao CRUD e aos composables
+# MangaStore — uma vitrine Vue 3 que amadurece do `fetch` na página à camada de serviço, à autenticação, ao CRUD, aos composables e ao Quasar
 
 Projeto didático da disciplina de Desenvolvimento Web (QXD0279). É uma _single-page
 application_ em **Vue 3 + Vite + TypeScript** que consome uma API REST (um back-end
 [Strapi](https://strapi.io/) rodando em `http://localhost:1337`). O código ensina,
 nesta ordem, a isolar o acesso à API, a deixar a rota guardar o estado, a proteger
-rotas com Pinia e _navigation guards_ e, por fim, a escrever telas de escrita
-(criar, editar, remover) extraindo a lógica repetida em componentes e _composables_.
+rotas com Pinia e _navigation guards_, a escrever telas de escrita (criar,
+editar, remover) extraindo a lógica repetida em componentes e _composables_ e,
+por fim, a trocar o Bootstrap por uma biblioteca de componentes Vue, o
+[Quasar](https://quasar.dev/).
 
 ---
 
@@ -15,8 +17,10 @@ Partimos de componentes que chamam `fetch` diretamente e montam a URL na mão;
 chegamos a uma aplicação com camada de acesso a dados isolada, tratamento de
 carregamento/erro/404, componentes de UI reaproveitáveis dirigidos por rota,
 estado global com Pinia, um fluxo de autenticação que sobrevive a um F5 e
-resiste a alguém editar o `localStorage` na mão, e uma área administrativa com
-CRUD cuja lógica de estado mora em _composables_.
+resiste a alguém editar o `localStorage` na mão, uma área administrativa com
+CRUD cuja lógica de estado mora em _composables_ e, por último, uma interface
+inteira em componentes do Quasar, com tema claro e escuro e uma paleta que passa
+nos critérios de contraste da WCAG.
 
 Os estágios se agrupam nas tags do repositório — use-as para fazer `git checkout`
 na versão que o texto descreve:
@@ -26,6 +30,7 @@ na versão que o texto descreve:
 | `v0.1` | `pagina-de-detalhes-manga` | 1 a 6 — leitura do catálogo |
 | `v0.2` | `autenticacao_e_autorizacao` | 7 a 11 — autenticação e autorização |
 | `v0.3` | `crud_manga` | 12 a 16 — CRUD administrativo e composables |
+| `v0.4` | `quasar_migration` | 17 a 23 — migração do Bootstrap para o Quasar |
 
 ### 1. Ponto de partida: uma SPA roteada com Vue 3 + Vite + TypeScript
 
@@ -1171,6 +1176,446 @@ onBeforeMount(async () => {
   mudança de `manga`. O `form` é uma cópia editável, não uma referência ao objeto
   que veio do servidor.
 
+### 17. O Quasar entra pelo plugin do Vite, e o Bootstrap sai do `index.html`
+
+Até a v0.3, a aparência vinha do Bootstrap carregado por CDN no `index.html`,
+junto com o HTML e o script de tema do exemplo _Album_. A troca pelo
+[Quasar](https://quasar.dev/) começa pela instalação como **biblioteca de
+componentes** dentro do projeto que já existe, e não pelo Quasar CLI.
+
+```sh
+npm i quasar @quasar/extras
+npm i -D @quasar/vite-plugin sass-embedded
+```
+
+```ts
+// vite.config.ts (v0.4)
+plugins: [
+  vue({ template: { transformAssetUrls } }),
+  quasar({
+    sassVariables: fileURLToPath(new URL('./src/quasar-variables.sass', import.meta.url)),
+  }),
+  vueDevTools(),
+],
+```
+
+```ts
+// src/main.ts (v0.4) — plugins, idioma e tema escuro seguindo o sistema
+import { Quasar, Notify, Dialog, Loading } from 'quasar'
+import langPtBR from 'quasar/lang/pt-BR'
+import '@quasar/extras/material-icons/material-icons.css'
+import 'quasar/src/css/index.sass'
+
+app.use(Quasar, {
+  plugins: { Notify, Dialog, Loading },
+  lang: langPtBR,
+  config: { dark: 'auto' },
+})
+```
+
+O `index.html` volta a ser só o esqueleto (`<div id="app">` e o `main.ts`), e o
+`public/color-modes.js` é apagado.
+
+**Por que o plugin do Vite, e por que tirar o Bootstrap logo no começo?**
+
+- O Quasar CLI geraria outro projeto, com `quasar.config`, _boot files_ e outra
+  estrutura de pastas, e exigiria refazer ESLint, oxlint, `tsconfig` e scripts.
+  Com o plugin, `src/api`, `src/stores`, o router e os _composables_ ficam
+  intactos. A migração troca só a camada visual, e isso fica visível no _diff_.
+- Os dois frameworks usam **as mesmas classes com significados diferentes**
+  (`.row`, `.col-*`, `.flex`, a tipografia de `h1`–`h6`, o _reset_ do `body`). Com
+  os dois carregados, uma tela intermediária pode parecer certa por causa do
+  Bootstrap ou quebrada por causa dele. Tirar o Bootstrap cedo deixa as páginas
+  ainda não migradas feias, mas honestas.
+- `config: { dark: 'auto' }` faz o tema acompanhar o sistema operacional e
+  substitui as 80 linhas do `color-modes.js`.
+- O caminho de `sassVariables` precisa ser **absoluto**, por isso o mesmo
+  `fileURLToPath(new URL(...))` já usado no alias `@`.
+
+### 18. `MainLayout`: a casca vira um layout do Quasar, e as rotas passam a ser filhas dele
+
+O `NavBar.vue` e o rodapé do exemplo _Album_ que moravam no `App.vue` saem. A
+casca da aplicação passa a ser um componente de layout, e o `App.vue` fica só com
+`<RouterView />`.
+
+```vue
+<!-- src/layouts/MainLayout.vue (v0.4) — resumido -->
+<q-layout view="hHh lpR fFf">
+  <q-header elevated class="bg-dark text-white">
+    <q-toolbar class="page-width">
+      <q-btn flat no-caps icon="menu_book" label="MangaStore" :to="{ name: 'home' }" />
+      <q-space />
+      <q-btn
+        flat
+        round
+        :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
+        @click="$q.dark.toggle()"
+      />
+      <q-btn-dropdown v-if="authStore.isAuthenticated" :label="authStore.username ?? ''">
+        <!-- Administração (só admin) e Sair -->
+      </q-btn-dropdown>
+      <q-btn v-else flat no-caps icon="login" label="Entrar" :to="{ name: 'login' }" />
+    </q-toolbar>
+  </q-header>
+
+  <q-page-container>
+    <q-page padding>
+      <div class="page-width"><RouterView /></div>
+    </q-page>
+  </q-page-container>
+</q-layout>
+```
+
+```ts
+// src/router/index.ts (v0.4) — todas as rotas, inclusive a curinga, dentro do layout
+const routes = [
+  {
+    path: '/',
+    component: MainLayout,
+    children: [
+      { path: '', name: 'home', component: Home },
+      { path: 'manga/:id', name: 'manga-detail', component: MangaDetail },
+      { path: 'admin', meta: { requiresAuth: true }, children: [/* ... */] },
+      // login, register, notFound...
+      { path: ':pathMatch(.*)*', name: 'catch-all', component: NotFound },
+    ],
+  },
+]
+```
+
+**Por que o layout é uma rota, e não um componente no `App.vue`?**
+
+- O `QLayout` precisa envolver o `QPageContainer`, e o `QPage` precisa estar
+  dentro dele. Como componente de rota, o layout vira mais um nível da árvore do
+  Vue Router, o mesmo mecanismo de rotas aninhadas do estágio 15.
+- Uma tela futura sem cabeçalho (uma página de impressão, por exemplo) seria uma
+  rota **irmã** do `MainLayout`, e não um `v-if` no `App.vue`.
+- Como os `name` das rotas não mudaram, nenhum `:to="{ name: ... }"` nem o guard
+  do estágio 9 precisou ser alterado. É o retorno do estágio 11, que trocou
+  caminhos por nomes.
+- O menu que dependia de `data-bs-toggle="collapse"` virou `QBtnDropdown`. Como no
+  `Modal` do estágio 13, quem controla abrir e fechar agora é o Vue.
+
+### 19. Feedback pelos plugins do Quasar: `Dialog`, `Loading` e `Notify`
+
+Três peças da v0.3 existiam só para suprir o que o Bootstrap não tinha sem
+JavaScript: o `Modal`, o `useAlert` e o `PaginationContainer`. O Quasar já traz
+todas, e os três arquivos são apagados.
+
+```ts
+// src/pages/admin/HomeAdmin.vue (v0.4) — confirmação e remoção sem estado de modal
+function confirmDelete(manga: Manga) {
+  $q.dialog({
+    title: 'Confirmação',
+    message: `Você realmente deseja deletar o Mangá ${manga.title}?`,
+    cancel: { label: 'Cancelar', flat: true },
+    ok: { label: 'Deletar', color: 'negative' },
+    persistent: true,
+  }).onOk(() => deleteManga(manga.id))
+}
+
+async function deleteManga(id: number) {
+  $q.loading.show({ message: 'Deletando…' })
+  try {
+    await MangaService.deleteById(id)
+    mangas.value = mangas.value.filter((m) => m.id != id)
+    $q.notify({ type: 'positive', message: 'Manga deletado com sucesso', position: 'top-right' })
+  } catch (e) {
+    $q.notify({ type: 'negative', message: (e as Error).message, position: 'top-right' })
+  } finally {
+    $q.loading.hide()
+  }
+}
+```
+
+```ts
+// src/pages/admin/MangaForm.vue (v0.4) — o formulário avisa o sucesso antes de navegar
+$q.notify({ type: 'positive', message, position: 'top-right' })
+await router.push({ name: 'admin' })
+```
+
+```ts
+// src/pages/Home.vue (v0.4) — a URL continua sendo a fonte da página atual
+const currentPage = computed({
+  get: () => meta.value.pagination?.page ?? 1,
+  set: (page: number) => router.push({ name: 'home', query: { page } }),
+})
+```
+
+```vue
+<!-- src/pages/Home.vue (v0.4) -->
+<q-pagination
+  v-model="currentPage"
+  color="secondary"
+  :max="meta.pagination?.pageCount ?? 1"
+  :max-pages="7"
+  direction-links
+  boundary-links
+/>
+```
+
+O `Alert.vue` continua existindo para erros que pertencem à tela: agora é um
+`QBanner` com ícone por tipo e um botão que emite `dismiss`, e a página decide o
+que limpar (`@dismiss="error = null"`).
+
+**O que cada troca ensina?**
+
+- **`selectedManga`, `showModal` e `deleting` desaparecem.** O estágio 13 guardava
+  o mangá selecionado porque o `Modal` vivia no template e precisava saber o que
+  mostrar. Com `$q.dialog()`, o `manga` fica capturado na _closure_ do `onOk`: o
+  estado que existia só para o diálogo deixa de existir.
+- **Notificação é global, erro de tela é local.** Uma mensagem de sucesso tem que
+  sobreviver à navegação, e por isso o `useAlert` + `history.state` do estágio 15
+  virou `$q.notify()`, que fica acima das rotas. Já o erro de carga de uma página
+  pertence a ela e continua num `ref` com `<Alert>`. É a mesma distinção do
+  estágio 14 (composable × store), agora resolvida por plugin.
+- **`computed` com `get`/`set` como `v-model`.** O `QPagination` quer um
+  `v-model`, e a página atual mora na URL (estágio 6). O `set` faz `router.push`,
+  e o `onBeforeRouteUpdate` que já existia recarrega a lista. A regra "a rota
+  guarda o estado" continua valendo.
+- **`AlertType` muda de valores, não de nomes.** De `danger`/`success` (sufixos
+  do Bootstrap) para `negative`/`positive` (cores do Quasar): o
+  `` `bg-${props.type}` `` segue montando a classe sem `switch`, e quem usa
+  `AlertType.Danger` não percebe a troca.
+- **`dismiss` como evento, e não um `visible` interno.** Se o `Alert` se
+  escondesse sozinho, um segundo erro com a **mesma** mensagem não reapareceria,
+  porque a prop não mudou. Emitindo, quem limpa o erro é o dono dele.
+
+### 20. O grid do Quasar e a "estante" da vitrine
+
+Com o Bootstrap fora, cada página troca suas classes pelas do Quasar (`q-card`,
+`q-img`, `q-btn :to`, `.row`/`.col-*`, `.q-mb-md`). Duas mudanças de desenho se
+destacam.
+
+**O card deixa de decidir a própria coluna.** Na v0.3 o `MangaCard` começava com
+`<div class="col">`. Agora ele é só a capa com uma legenda, e quem organiza as
+colunas é a página. Na vitrine, as capas se sobrepõem como livros numa estante,
+e a capa sob o mouse (ou com foco do teclado) vem para a frente:
+
+```css
+/* src/pages/Home.vue (v0.4) — só com mouse e tela a partir de 600px */
+@media (hover: hover) and (min-width: 600px) {
+  .shelf {
+    gap: 32px 0;
+    padding: 12px 110px 0 0;
+  }
+
+  .shelf-item {
+    width: max(180px, 20%);
+    margin-right: -110px;
+  }
+
+  .shelf-item:hover,
+  .shelf-item:focus-within {
+    z-index: 1;
+    transform: translateY(-12px) scale(1.05);
+  }
+}
+```
+
+**A página de detalhe** ganha capa com sombra, fundo com a própria capa
+desfocada, volume num `q-chip`, preço formatado em reais e botões
+Anterior/Próximo que são **links** (`q-btn :to`) em vez de `router.push` num
+`@click`.
+
+**Por que esses detalhes importam?**
+
+- `(hover: hover)` separa quem tem mouse de quem usa toque. A sobreposição
+  depende de _hover_ para revelar a capa; no celular ela esconderia conteúdo sem
+  ter como revelá-lo. Por isso, no toque, as capas ficam em grade de duas colunas
+  com a legenda sempre visível.
+- `max(180px, 20%)`: uma largura só em porcentagem, com uma sobreposição fixa de
+  110px, faz a parte visível de cada capa chegar a zero em janelas médias, e as
+  capas se empilham. O `max()` garante pelo menos 70px à mostra.
+- `:focus-within` junto de `:hover`: quem navega com Tab também traz a capa para
+  a frente. Como o `RouterLink` continua envolvendo o card, a capa segue sendo um
+  link de verdade (abre em nova aba, aparece no leitor de tela).
+- `q-btn :to` em vez de `@click="router.push(...)"`: o botão vira um `<a href>`,
+  com o comportamento de link que o usuário espera. O mesmo vale para "Adicionar"
+  e "Editar" no admin.
+- O nome `hasPrevious` virou `isFirst`: o valor era verdadeiro justamente quando
+  **não** havia anterior. Um nome que diz o contrário do que faz é um _bug_
+  esperando para acontecer.
+
+### 21. `QTable` na área administrativa
+
+A tabela escrita à mão vira um `QTable` com as colunas declaradas e tipadas. As
+células que não são texto simples (a capa e as ações) ganham _slots_.
+
+```ts
+// src/pages/admin/HomeAdmin.vue (v0.4)
+const columns: QTableColumn<Manga>[] = [
+  { name: 'cover', label: 'Capa', field: (row) => row.cover.url, align: 'left' },
+  { name: 'title', label: 'Título', field: 'title', align: 'left', sortable: true },
+  { name: 'number', label: 'Volume', field: 'number', align: 'center', sortable: true },
+  {
+    name: 'price',
+    label: 'Preço',
+    field: 'price',
+    align: 'right',
+    sortable: true,
+    format: (price: number) =>
+      price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+  },
+  { name: 'actions', label: 'Ações', field: 'id', align: 'right' },
+]
+```
+
+```vue
+<!-- src/pages/admin/HomeAdmin.vue (v0.4) — resumido -->
+<q-table
+  row-key="id"
+  :rows="mangas"
+  :columns="columns"
+  :loading="loading"
+  :pagination="{ rowsPerPage: 0 }"
+  hide-pagination
+  no-data-label="Nenhum mangá cadastrado"
+>
+  <template #body-cell-actions="props">
+    <q-td :props="props">
+      <q-btn round dense color="warning" text-color="dark" icon="edit"
+        :to="{ name: 'manga-edit', params: { id: props.row.id } }" />
+      <q-btn flat round dense color="negative" icon="delete"
+        @click="confirmDelete(props.row)" />
+    </q-td>
+  </template>
+</q-table>
+
+<q-btn v-if="hasNextPage" label="Ver mais" :loading="loadingMore" @click="goToNextPage" />
+```
+
+**Por que declarar colunas, e por que desligar a paginação da tabela?**
+
+- `QTableColumn<Manga>[]` faz o TypeScript checar `field: 'title'` contra o tipo
+  `Manga`. Se o campo for renomeado no domínio, a tabela não compila, em vez de
+  mostrar uma coluna vazia.
+- `format` separa o **dado** (o número `price`) da **apresentação** (`R$ 29,90`):
+  a ordenação continua comparando números, não textos.
+- `rowsPerPage: 0` + `hide-pagination`: a paginação de verdade é o "Ver mais" do
+  estágio 12, feita no servidor. Uma segunda paginação, no cliente, por cima dela
+  confundiria o usuário.
+- A ordenação só vê o que já foi carregado. Com "Ver mais", isso é uma limitação
+  conhecida, a mesma pergunta do estágio 12 sobre onde mora o cursor.
+- `:loading` da tabela e `:loading` do botão substituem os dois `LoadingSpinner`:
+  `loading` e `loadingMore` continuam sendo dois estados diferentes, mas cada um
+  aparece no próprio componente.
+
+### 22. Formulários com `QForm` e regras de validação reaproveitáveis
+
+Login, Registro e o formulário de mangá trocam `<form>`, `<input>` e os
+atributos `required`/`minlength`/`type="email"` do HTML por `QForm` e `QInput`
+com `:rules`. As regras moram num módulo próprio.
+
+```ts
+// src/utils/validation.ts (v0.4)
+import type { ValidationRule } from 'quasar'
+
+export const required: ValidationRule = (val) =>
+  (val !== null && val !== undefined && val !== '') || 'Campo obrigatório'
+
+export const minValue =
+  (limit: number): ValidationRule =>
+  (val) =>
+    Number(val) >= limit || `Deve ser no mínimo ${limit}`
+
+export const minLength =
+  (limit: number): ValidationRule =>
+  (val) =>
+    (typeof val === 'string' && val.length >= limit) || `Deve ter no mínimo ${limit} caracteres`
+
+export const email: ValidationRule = (val) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || 'E-mail inválido'
+```
+
+```ts
+// src/pages/admin/MangaForm.vue (v0.4) — a regra assimétrica do estágio 15 vira regra do campo
+const coverRules = [(file: File | null) => isEditing.value || !!file || 'Selecione uma capa']
+
+watch(cover, (file) => {
+  URL.revokeObjectURL(coverPreview.value)
+  coverPreview.value = file ? URL.createObjectURL(file) : ''
+})
+```
+
+```ts
+// src/pages/Register.vue (v0.4) — uma regra que depende de outro campo
+const passwordsMatch = (val: string) => val === password.value || 'As senhas não coincidem'
+```
+
+**Por que regras como funções, e o que muda para o usuário?**
+
+- Uma regra do Quasar é só uma função que devolve `true` ou a mensagem de erro.
+  Por isso `minValue(1)` e `minLength(6)` são **fábricas**: recebem o limite e
+  devolvem a regra. O mesmo `required` serve às três páginas.
+- `canSubmit` e o botão desabilitado saem. Antes, sem capa, o botão ficava cinza
+  sem dizer por quê; agora ele fica habilitado, e o `QForm` só chama `submit`
+  quando todas as regras passam, mostrando a mensagem no campo que falta.
+- `passwordsMatch` substitui o `computed` e a classe `is-invalid` montada à mão:
+  o Quasar exibe o erro no lugar certo sozinho.
+- `watch(cover)` substitui o `@change` do `<input type="file">`: o `QFile` tem
+  `v-model`, e a prévia reage ao arquivo, venha ele de uma escolha ou do botão de
+  limpar.
+- `<fieldset :disabled>` não tem equivalente no `QForm`, então cada campo recebe
+  `:disable="busy"`, com `busy = loading || saving`.
+- **Atenção à grafia:** nos componentes do Quasar a prop é `disable`, não
+  `disabled`. É o erro mais comum de quem vem do HTML ou do Bootstrap.
+
+### 23. Uma paleta acessível para os dois temas
+
+A primeira configuração usava como `$primary` o roxo `#712cf9`, que vinha do
+botão de tema da **documentação** do Bootstrap, e não da aplicação. Além de
+destoar do azul original, a paleta tinha pares abaixo do mínimo da WCAG 2.1 (AA:
+4,5:1 para texto e 3:1 para ícones): texto branco sobre o amarelo de _warning_
+(1,63:1) e o roxo como texto no tema escuro (3,06:1).
+
+```sass
+// src/quasar-variables.sass (v0.4) — Bootstrap 5.3, escurecido até passar em AA com branco
+$primary: #0b5ed7
+$secondary: #5c636a
+$accent: #6f42c1
+
+$dark: #212529
+$dark-page: #121212
+
+$positive: #146c43
+$negative: #b02a37
+$info: #087990
+$warning: #ffc107
+```
+
+```css
+/* src/css/app.css (v0.4) — no escuro, só a cor de TEXTO muda */
+.body--dark .text-primary {
+  color: #6ea8fe !important;
+}
+
+.body--dark .text-secondary {
+  color: #adb5bd !important;
+}
+/* ... positive, negative, accent, info, warning ... */
+```
+
+```ts
+// src/components/Alert.vue (v0.4) — amarelo só como fundo, com texto escuro
+const ink = computed(() => (props.type === AlertType.Warning ? 'text-dark' : 'text-white'))
+```
+
+**Por que trocar só o texto no tema escuro?**
+
+- No Quasar, a mesma cor serve de **fundo** (`bg-primary`, em botões preenchidos
+  com texto branco) e de **texto** (`text-primary`, em botões `flat`, links,
+  preço, paginação). Uma cor escura o bastante para o branco sobre ela passar em
+  AA é escura demais para aparecer como texto sobre `#121212`. Trocando só as
+  classes `text-*` no `.body--dark`, cada uso recebe a cor que funciona para ele.
+- As cores claras do tema escuro são as de ênfase que o próprio Bootstrap 5.3 usa
+  no modo escuro: a identidade visual continua a do Bootstrap.
+- O `!important` é necessário porque as classes `text-*` do Quasar já usam
+  `!important`; a regra nova vence pela especificidade de `.body--dark`.
+- O amarelo passa a aparecer **só como fundo com texto escuro** (9,46:1): o botão
+  de editar, o alerta de aviso e o ícone da página 404. É o mesmo arranjo do
+  `btn-warning` original.
+
 ---
 
 ## 🛠️ Tecnologias Utilizadas
@@ -1178,11 +1623,11 @@ onBeforeMount(async () => {
 - **Vue 3 (`<script setup>`):** framework de UI. Toda a tipagem de props vem de
   `defineProps<T>()` sobre os tipos do domínio; eventos tipados com
   `defineEmits<T>()`; lógica de estado reaproveitável em _composables_
-  (`useAlert`, `useManga`).
+  (`useManga`; o `useAlert` da v0.3 foi substituído pelo `Notify` do Quasar).
 - **Vue Router 4:** roteamento no cliente. Rotas nomeadas e aninhadas, parâmetro
-  dinâmico `:id`, rota curinga 404, o gancho `onBeforeRouteUpdate`, `state` na
-  navegação e um guard global (`router.beforeEach`) que protege `/admin` e seus
-  filhos por `meta.requiresAuth`.
+  dinâmico `:id`, rota curinga 404, o gancho `onBeforeRouteUpdate`, um layout
+  como rota pai de todas as páginas e um guard global (`router.beforeEach`) que
+  protege `/admin` e seus filhos por `meta.requiresAuth`.
 - **Pinia:** estado global via _setup store_ (`useAuthStore`), com o estado de
   autenticação persistido em `localStorage` e revalidado no servidor a cada
   navegação para uma rota protegida.
@@ -1190,8 +1635,11 @@ onBeforeMount(async () => {
   `MetaInformation` são o contrato entre a API e os componentes; `route-meta.d.ts`
   estende os tipos do próprio Vue Router para `meta.requiresAuth`.
 - **Vite:** _dev server_ com HMR e _build_ de produção. Alias `@` → `src/`.
-- **Bootstrap 5.3 (via CDN, em `index.html`):** classes utilitárias de layout;
-  nenhum componente JS do Bootstrap é usado.
+- **Quasar 2 (via `@quasar/vite-plugin`):** componentes de interface (`QLayout`,
+  `QTable`, `QForm`, `QInput`, `QFile`, `QPagination`...), os plugins `Dialog`,
+  `Loading` e `Notify`, ícones Material, tema escuro automático e as variáveis
+  Sass de cor em `src/quasar-variables.sass`. Até a v0.3, a aparência vinha do
+  Bootstrap 5.3 por CDN.
 - **Strapi (back-end externo):** API REST em `http://localhost:1337`. Não faz
   parte deste repositório — precisa estar rodando à parte.
 - **ESLint + oxlint + Prettier:** padronização e checagem estática.
@@ -1258,6 +1706,20 @@ npm run format       # prettier em src/
 - **Faça `git diff v0.2 v0.3 -- src/pages/MangaDetail.vue`.** A página encolhe
   porque a lógica foi para `useManga` — e é o mesmo princípio de "extrair no
   segundo uso" que você já viu nos estágios 6 e 10, agora aplicado a estado.
+- **Faça `git diff v0.3 v0.4 -- src/api src/stores src/composables`.** A única
+  mudança fora da interface é o `pageSize` do `findAll`, de 24 para 20, para a
+  estante da vitrine. `useManga`, a store e o `request<T>` ficaram intactos. Uma
+  boa separação de camadas é o que permite trocar a interface inteira sem tocar
+  na lógica.
+- **Compare o `HomeAdmin` da v0.3 com o da v0.4.** Conte quantos `ref` existiam
+  só para controlar o `Modal` e veja para onde eles foram quando o diálogo passou
+  a ser uma chamada de função (`$q.dialog`).
+- **Abra a vitrine com o mouse e depois com Tab.** A estante do estágio 20 só
+  funciona com teclado por causa de `:focus-within`. Tire essa linha e tente de
+  novo.
+- **Confira um contraste você mesmo.** Pegue um par de cores do estágio 23 e
+  calcule a razão num verificador de contraste WCAG. Depois troque o `$primary`
+  de volta para `#712cf9` e veja o preço na página de detalhe no tema escuro.
 
 ---
 
